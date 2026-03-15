@@ -1,0 +1,42 @@
+name: 'QAI Test Intelligence'
+description: 'Analyze CI test failures and post intelligent PR summaries. Works standalone — no cloud account needed.'
+author: 'QAI Platform'
+
+branding:
+  icon: 'activity'
+  color: 'purple'
+
+inputs:
+  junit-path:
+    description: 'Path or glob to JUnit XML file(s), e.g. "test-results/results.xml" or "**/junit-*.xml"'
+    required: true
+  github-token:
+    description: 'GitHub token for posting PR comments. Defaults to the built-in GITHUB_TOKEN.'
+    required: false
+    default: '${{ github.token }}'
+  post-comment:
+    description: 'Whether to post a PR comment with the analysis results (true/false)'
+    required: false
+    default: 'true'
+  qai-url:
+    description: 'QAI cloud platform ingest URL for historical intelligence (optional). Example: https://ingest.your-domain.com'
+    required: false
+  qai-api-key:
+    description: 'QAI API key for cloud platform (required when qai-url is set)'
+    required: false
+
+outputs:
+  risk-level:
+    description: 'Computed risk level: low | medium | high'
+  risk-score:
+    description: 'Computed risk score: 0.0–1.0'
+  failed-tests:
+    description: 'Number of failed tests'
+  total-tests:
+    description: 'Total number of tests'
+  cluster-count:
+    description: 'Number of unique failure clusters detected'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

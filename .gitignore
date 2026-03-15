@@ -1,0 +1,2 @@
+node_modules/
+# dist/ is intentionally committed — required for GitHub Actions to run
