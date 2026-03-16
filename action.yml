@@ -1,5 +1,5 @@
 name: 'QAI Test Intelligence'
-description: 'Analyze CI test failures and post intelligent PR summaries. Works standalone — no cloud account needed.'
+description: 'Analyze JUnit test failures, cluster errors, score PR risk, and post intelligent summaries. Supports Playwright trace RCA. Works with Jest, Vitest, pytest and more.'
 author: 'QAI Platform'
 
 branding:
