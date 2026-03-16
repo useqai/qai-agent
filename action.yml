@@ -1,5 +1,5 @@
 name: 'QAI Test Intelligence'
-description: 'Analyze JUnit test failures, cluster errors, score PR risk, and post intelligent summaries. Supports Playwright trace RCA. Works with Jest, Vitest, pytest and more.'
+description: 'JUnit failure clustering, PR risk scoring, and Playwright trace RCA. Posts intelligent summaries on every pull request.'
 author: 'QAI Platform'
 
 branding:
