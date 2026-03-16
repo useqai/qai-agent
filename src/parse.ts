@@ -1,5 +1,8 @@
 import { XMLParser } from 'fast-xml-parser'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
+import AdmZip from 'adm-zip'
 
 // ─── Test Status ──────────────────────────────────────────────────────────────
 
@@ -211,4 +214,95 @@ export function analyze(tests: ParsedTestCase[]): AnalysisResult {
   const risk = computeRisk(tests.length, failedTests, clusters.length)
 
   return { tests, clusters, risk, totalTests: tests.length, failedTests, passedTests, skippedTests }
+}
+
+// ─── Playwright trace parser (inlined from packages/trace-parser) ─────────────
+
+type RcaCauseStr = 'UI Changed' | 'Backend Error' | 'Timing / Flaky' | 'Environment Failure' | 'Test Bug' | 'Unknown'
+
+export interface TraceRcaResult {
+  traceFile: string
+  cause: RcaCauseStr
+  confidence: number
+  evidence: string[]
+  suggestions: string[]
+}
+
+interface TraceStep { action: string; locator?: string; timestamp: number; durationMs: number; error?: string }
+interface TraceNetworkEvent { url: string; method: string; status: number; timestamp: number; durationMs: number }
+interface TraceConsoleEvent { type: 'log' | 'warn' | 'error'; text: string; timestamp: number }
+interface ParsedTrace { steps: TraceStep[]; networkEvents: TraceNetworkEvent[]; consoleEvents: TraceConsoleEvent[]; failedStep?: TraceStep }
+
+async function parseTraceZip(zipBuffer: Buffer): Promise<ParsedTrace> {
+  let zip: AdmZip
+  try { zip = new AdmZip(zipBuffer) } catch { return { steps: [], networkEvents: [], consoleEvents: [] } }
+
+  const steps: TraceStep[] = []
+  const networkEvents: TraceNetworkEvent[] = []
+  const consoleEvents: TraceConsoleEvent[] = []
+
+  for (const entry of zip.getEntries().filter(e => e.entryName.endsWith('.trace'))) {
+    for (const line of entry.getData().toString('utf-8').split('\n').filter(l => l.trim())) {
+      let ev: Record<string, unknown>
+      try { ev = JSON.parse(line) as Record<string, unknown> } catch { continue }
+
+      if (ev['type'] === 'action') {
+        const params = ev['params'] as Record<string, unknown> | undefined
+        const error = ev['error'] as Record<string, unknown> | undefined
+        const start = (ev['startTime'] ?? ev['wallTime'] ?? 0) as number
+        steps.push({
+          action: (ev['apiName'] ?? [ev['class'], ev['method']].filter(Boolean).join('.') ?? 'unknown') as string,
+          locator: params?.['selector'] as string | undefined,
+          timestamp: start,
+          durationMs: (ev['duration'] ?? 0) as number,
+          error: error?.['message'] as string | undefined,
+        })
+      } else if (ev['type'] === 'event') {
+        const params = ev['params'] as Record<string, unknown> | undefined
+        const msg = params?.['message'] as Record<string, unknown> | undefined
+        const text = (msg?.['text'] ?? params?.['text'] ?? '') as string
+        if (text) consoleEvents.push({ type: (msg?.['type'] ?? 'log') as 'log' | 'warn' | 'error', text, timestamp: (ev['time'] ?? 0) as number })
+      } else if (ev['type'] === 'resource-snapshot') {
+        const snap = ev['snapshot'] as Record<string, unknown> | undefined
+        const req = snap?.['request'] as Record<string, unknown> | undefined
+        const res = snap?.['response'] as Record<string, unknown> | undefined
+        const url = (req?.['url'] ?? ev['url'] ?? '') as string
+        if (url) networkEvents.push({ url, method: (req?.['method'] ?? 'GET') as string, status: (res?.['status'] ?? ev['status'] ?? 0) as number, timestamp: 0, durationMs: 0 })
+      }
+    }
+  }
+
+  steps.sort((a, b) => a.timestamp - b.timestamp)
+  return { steps, networkEvents, consoleEvents, failedStep: steps.find(s => s.error) }
+}
+
+function runRcaDetectors(trace: ParsedTrace): { cause: RcaCauseStr; confidence: number; evidence: string[]; suggestions: string[] } {
+  const selectorErrors = trace.steps.filter(s => s.error && /not found|locator resolved to|strict mode|no element|element is not visible/i.test(s.error))
+  if (selectorErrors.length > 0) return { cause: 'UI Changed', confidence: 0.85, evidence: selectorErrors.map(s => `"${s.action}" failed: ${s.error}`), suggestions: ['Update the locator to use getByRole or getByText', 'Check if the element was removed or renamed in this PR'] }
+
+  const serverErrors = trace.networkEvents.filter(e => e.status >= 500)
+  if (serverErrors.length > 0) return { cause: 'Backend Error', confidence: 0.8, evidence: serverErrors.map(e => `${e.method} ${e.url} → ${e.status}`), suggestions: ['Check backend logs for the failing endpoint', 'Verify the API was not broken in this PR'] }
+
+  const assertErrors = trace.consoleEvents.filter(e => e.type === 'error' && /assert|expect|should|must/i.test(e.text))
+  if (assertErrors.length > 0) return { cause: 'Test Bug', confidence: 0.65, evidence: assertErrors.map(e => e.text), suggestions: ['Review the assertion logic — test expectation may be incorrect', 'Check if test data matches current application state'] }
+
+  const timeouts = trace.steps.filter(s => s.error && /timeout|timed out/i.test(s.error))
+  if (timeouts.length > 0) return { cause: 'Timing / Flaky', confidence: 0.7, evidence: timeouts.map(s => `"${s.action}" timed out`), suggestions: ['Add waitForResponse or waitForLoadState before the action', 'Consider increasing timeout for slow CI environments'] }
+
+  const netFails = trace.networkEvents.filter(e => e.status === 0 || e.status >= 502)
+  const envErrors = trace.consoleEvents.filter(e => e.type === 'error' && /net::err|failed to fetch|network error|econnrefused/i.test(e.text))
+  if (netFails.length > 0 || envErrors.length > 0) return { cause: 'Environment Failure', confidence: 0.75, evidence: [...netFails.map(e => `Network failure: ${e.url}`), ...envErrors.map(e => e.text)], suggestions: ['Check if test environment services are running', 'Verify network connectivity between runner and application'] }
+
+  return { cause: 'Unknown', confidence: 0, evidence: [], suggestions: ['Review the full trace for clues'] }
+}
+
+export async function analyzeTraces(tracePaths: string[]): Promise<TraceRcaResult[]> {
+  const results: TraceRcaResult[] = []
+  for (const tp of tracePaths) {
+    const buf = readFileSync(tp)
+    const trace = await parseTraceZip(buf)
+    const rca = runRcaDetectors(trace)
+    results.push({ traceFile: basename(tp), ...rca })
+  }
+  return results
 }

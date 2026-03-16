@@ -1,10 +1,10 @@
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import { readFileSync } from 'node:fs'
-import { parseJunitXml, analyze } from './parse.js'
+import { parseJunitXml, analyze, analyzeTraces } from './parse.js'
 import { buildComment } from './comment.js'
 import { getGithubContext, upsertPrComment } from './github.js'
-import { sendToCloud } from './ingest.js'
+import { sendToCloud, sendTraceToCloud } from './ingest.js'
 
 async function run(): Promise<void> {
   const junitPath = core.getInput('junit-path', { required: true })
@@ -12,6 +12,7 @@ async function run(): Promise<void> {
   const postComment = core.getInput('post-comment') !== 'false'
   const qaiUrl = core.getInput('qai-url')
   const qaiApiKey = core.getInput('qai-api-key')
+  const tracePath = core.getInput('trace-path')
 
   // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
   const globber = await glob.create(junitPath)
@@ -39,6 +40,15 @@ async function run(): Promise<void> {
 
   const ctx = getGithubContext()
 
+  // ── Analyze Playwright traces (standalone RCA) ─────────────────────────────
+  let traceFiles: string[] = []
+  if (tracePath) {
+    const traceGlobber = await glob.create(tracePath)
+    traceFiles = await traceGlobber.glob()
+    core.info(`Found ${traceFiles.length} trace file(s)`)
+  }
+  const traceResults = await analyzeTraces(traceFiles)
+
   // ── Optional: send to QAI cloud platform ──────────────────────────────────
   if (qaiUrl && qaiApiKey) {
     for (const file of files) {
@@ -49,6 +59,14 @@ async function run(): Promise<void> {
         core.warning(`Failed to send to QAI cloud: ${String(err)}`)
       }
     }
+    for (const trace of traceFiles) {
+      try {
+        await sendTraceToCloud(qaiUrl, qaiApiKey, trace, ctx)
+        core.info(`Sent trace ${trace} to QAI cloud platform`)
+      } catch (err) {
+        core.warning(`Failed to send trace to QAI cloud: ${String(err)}`)
+      }
+    }
   }
 
   // ── Post PR comment ────────────────────────────────────────────────────────
@@ -56,7 +74,7 @@ async function run(): Promise<void> {
     const cloudDashboardUrl = qaiUrl
       ? qaiUrl.replace('/ingest', '').replace('ingest.', '').replace(/\/$/, '')
       : undefined
-    const body = buildComment(result, cloudDashboardUrl)
+    const body = buildComment(result, traceResults, cloudDashboardUrl)
     try {
       await upsertPrComment(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body)
       core.info(`Posted PR comment on PR #${ctx.prNumber}`)

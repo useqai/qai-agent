@@ -1,4 +1,4 @@
-import type { AnalysisResult } from './parse.js'
+import type { AnalysisResult, TraceRcaResult } from './parse.js'
 
 const COMMENT_MARKER = '<!-- qai-test-intelligence -->'
 
@@ -12,7 +12,7 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + '…' : str
 }
 
-export function buildComment(result: AnalysisResult, cloudUrl?: string): string {
+export function buildComment(result: AnalysisResult, traceResults: TraceRcaResult[] = [], cloudUrl?: string): string {
   const { totalTests, failedTests, passedTests, skippedTests, clusters, risk, tests } = result
   const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0
   const emoji = RISK_EMOJI[risk.level]
@@ -49,6 +49,18 @@ export function buildComment(result: AnalysisResult, cloudUrl?: string): string 
     lines.push('|---|---|')
     for (const c of clusters.slice(0, 8)) {
       lines.push(`| \`${truncate(c.normalizedPattern, 70)}\` | ${c.tests.length} |`)
+    }
+    lines.push('')
+  }
+
+  if (traceResults.length > 0) {
+    lines.push('### RCA Analysis (from Playwright traces)')
+    lines.push('| Trace | Cause | Confidence | Suggestion |')
+    lines.push('|---|---|---|---|')
+    for (const t of traceResults.slice(0, 5)) {
+      const pct = Math.round(t.confidence * 100)
+      const suggestion = truncate(t.suggestions[0] ?? '—', 80)
+      lines.push(`| \`${t.traceFile}\` | ${t.cause} | ${pct}% | ${suggestion} |`)
     }
     lines.push('')
   }

@@ -24,6 +24,9 @@ inputs:
   qai-api-key:
     description: 'QAI API key for cloud platform (required when qai-url is set)'
     required: false
+  trace-path:
+    description: 'Glob to Playwright trace zip files for RCA analysis, e.g. "test-results/**/*.zip"'
+    required: false
 
 outputs:
   risk-level:
