@@ -55,37 +55,7 @@ jobs:
 
 ## Example PR comment
 
-```
-## QAI Test Intelligence
-
-5 tests · 2 failed (40% fail rate) · Risk: 🔴 High
-
-> Do not merge — investigate failures first
-
-### Failed Tests
-| Test                                          | Error                                        |
-|-----------------------------------------------|----------------------------------------------|
-| tests/login.spec.ts > invalid password        | Error: Timed out 5000ms waiting for locator  |
-| tests/dashboard.spec.ts > display recent runs | Error: locator.click: Element not found      |
-
-### Failure Clusters (2 unique patterns)
-| Pattern                                              | Occurrences |
-|------------------------------------------------------|-------------|
-| error: timed out <duration> waiting for locator      | 1           |
-| error: locator.click: element not found              | 1           |
-
-### RCA Analysis (from Playwright traces)
-| Trace                   | Cause         | Confidence | Suggestion                            |
-|-------------------------|---------------|------------|---------------------------------------|
-| sample-login-trace.zip  | UI Changed    | 85%        | Update the locator to use getByRole   |
-| sample-dashboard-trace.zip | Backend Error | 80%     | Check backend logs for failing endpoint |
-
-### Risk Factors
-- 40% of tests failed
-- 2 unique failure pattern(s)
-
-✅ 3 passed · ❌ 2 failed · Powered by QAI Platform
-```
+![QAI Agent PR comment example](https://github.com/user-attachments/assets/e777cd87-63b0-438f-a123-79a937cffb40)
 
 ---
 
