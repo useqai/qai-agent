@@ -134,9 +134,7 @@ Then add the `trace-path` input:
 
 ## Cloud platform (optional)
 
-> **🚧 Under construction** — The QAI cloud platform is currently in development. [Sign up for early access](https://useqai.com) to be notified when it launches.
-
-Connect to the QAI cloud platform to unlock:
+Connect to the [QAI cloud platform](https://useqai.dev) to unlock:
 
 - **Flakiness tracking** — see which tests fail intermittently across runs
 - **Historical clusters** — track how long a failure pattern has existed
@@ -151,11 +149,11 @@ Connect to the QAI cloud platform to unlock:
   with:
     junit-path: 'test-results/results.xml'
     trace-path: 'test-results/**/*.zip'
-    qai-url: ${{ secrets.QAI_INGEST_URL }}
+    qai-url: https://ingest.useqai.dev
     qai-api-key: ${{ secrets.QAI_API_KEY }}
 ```
 
-Get your API key at [useqai.com](https://useqai.com) *(coming soon).*
+Get your API key at [useqai.dev](https://useqai.dev).
 
 ---
 
