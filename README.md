@@ -134,13 +134,29 @@ Then add the `trace-path` input:
 
 ## Cloud platform (optional)
 
-Connect to the [QAI cloud platform](https://useqai.dev) to unlock:
+The GitHub Action gives every developer per-PR intelligence. Connect to the [QAI cloud platform](https://useqai.dev) to give your **engineering manager** the bigger picture.
 
-- **Flakiness tracking** — see which tests fail intermittently across runs
-- **Historical clusters** — track how long a failure pattern has existed
-- **LLM-powered RCA** — Claude-generated root cause explanations with fix suggestions
-- **Team dashboard** — repo-level and org-level failure intelligence
-- **Slack & Jira integration** — get notified and create tickets automatically
+### Action vs Dashboard
+
+| | GitHub Action | QAI Dashboard |
+|---|---|---|
+| Per-PR risk score | ✅ | ✅ |
+| Failure clusters | ✅ | ✅ |
+| AI root cause (from traces) | ✅ one-liner | ✅ full Claude explanation + evidence |
+| Fail rate trends over time | — | ✅ chart across all runs |
+| **Flakiness leaderboard** | — | ✅ which tests waste the most time |
+| Unresolved cluster tracking | — | ✅ "first seen 3 weeks ago, 47 hits" |
+| Cross-repo visibility | — | ✅ org-level stats dashboard |
+| Slack & Jira integration | — | ✅ |
+
+### What the dashboard answers that the PR comment can't
+
+- **"Which 5 tests are wasting the most engineering time this sprint?"** — the Flaky Tests leaderboard sorts every test by fail rate across all runs and branches.
+- **"Is our test suite getting more reliable or worse?"** — the Trends chart shows fail rate % across your last 30 runs so you can see if a fix actually worked.
+- **"How long has this failure been open?"** — failure clusters show `first seen X days ago` and occurrence count, so you can prioritize what to fix.
+- **"What's the AI saying about why it failed?"** — the dashboard shows the full Claude-generated root cause explanation with fix suggestions, not just a one-liner.
+
+### Connect in one step
 
 ```yaml
 - name: QAI Agent
@@ -153,7 +169,7 @@ Connect to the [QAI cloud platform](https://useqai.dev) to unlock:
     qai-api-key: ${{ secrets.QAI_API_KEY }}
 ```
 
-Get your API key at [useqai.dev](https://useqai.dev).
+Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 seconds.
 
 ---
 
