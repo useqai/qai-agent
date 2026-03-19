@@ -76,6 +76,8 @@ Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 s
 
 ## Example PR comment
 
+→ **[See a live PR comment on this repo](https://github.com/useqai/qai-agent/pull/2)**
+
 ![QAI Agent PR comment example](https://github.com/user-attachments/assets/e777cd87-63b0-438f-a123-79a937cffb40)
 
 ---
