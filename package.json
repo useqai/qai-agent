@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "ncc build src/index.ts -o dist --license licenses.txt",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --reporter=junit --outputFile=test-results/results.xml"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
@@ -16,8 +17,10 @@
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
-    "@vercel/ncc": "^0.38.3",
     "@types/node": "^22.0.0",
-    "typescript": "^5.5.0"
+    "@vercel/ncc": "^0.38.3",
+    "@vitest/coverage-v8": "^4.1.0",
+    "typescript": "^5.5.0",
+    "vitest": "^4.1.0"
   }
 }
