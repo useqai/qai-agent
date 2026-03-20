@@ -72,7 +72,7 @@ async function run(): Promise<void> {
   // ── Post PR comment ────────────────────────────────────────────────────────
   if (postComment && ctx.prNumber) {
     const cloudDashboardUrl = qaiUrl
-      ? qaiUrl.replace('/ingest', '').replace('ingest.', '').replace(/\/$/, '')
+      ? qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
       : undefined
     const body = buildComment(result, traceResults, cloudDashboardUrl)
     try {
