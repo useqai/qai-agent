@@ -29,5 +29,6 @@ jobs:
         if: always()
         with:
           junit-path: 'test-results/results.xml'
+          fail-on-high-risk: 'false'
           qai-url: https://ingest.useqai.dev
           qai-api-key: ${{ secrets.QAI_API_KEY }}
