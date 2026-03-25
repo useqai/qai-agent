@@ -17,13 +17,14 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
   const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0
   const emoji = RISK_EMOJI[risk.level]
 
+  const riskLabel = risk.level.charAt(0).toUpperCase() + risk.level.slice(1)
   const lines: string[] = [
     COMMENT_MARKER,
     '<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
     '',
-    `**${totalTests} tests** · **${failedTests} failed** (${failRate}% fail rate) · Risk: ${emoji} **${risk.level.charAt(0).toUpperCase() + risk.level.slice(1)}**`,
+    `**${totalTests} tests** &nbsp;|&nbsp; **${failedTests} failed** (${failRate}%) &nbsp;|&nbsp; ${emoji} **${riskLabel} Risk**${cloudUrl ? ` &nbsp;|&nbsp; [View in dashboard →](${cloudUrl})` : ''}`,
     '',
-    `> ${risk.mergeRecommendation}`,
+    `> ${emoji} **${risk.mergeRecommendation}**`,
     '',
   ]
 
