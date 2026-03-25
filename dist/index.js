@@ -34036,7 +34036,7 @@ function buildComment(result, traceResults = [], cloudUrl) {
     const emoji = RISK_EMOJI[risk.level];
     const lines = [
         COMMENT_MARKER,
-        '## QAI Test Intelligence',
+        '<img src="https://useqai.dev/favicon.ico" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
         '',
         `**${totalTests} tests** · **${failedTests} failed** (${failRate}% fail rate) · Risk: ${emoji} **${risk.level.charAt(0).toUpperCase() + risk.level.slice(1)}**`,
         '',
