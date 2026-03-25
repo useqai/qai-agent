@@ -34215,6 +34215,7 @@ async function run() {
     const qaiUrl = core.getInput('qai-url');
     const qaiApiKey = core.getInput('qai-api-key');
     const tracePath = core.getInput('trace-path');
+    const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true';
     // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
     const globber = await glob.create(junitPath);
     const files = await globber.glob();
@@ -34280,8 +34281,8 @@ async function run() {
     else if (postComment && !ctx.prNumber) {
         core.info('Not a PR event — skipping comment');
     }
-    // ── Fail the action if risk is high ───────────────────────────────────────
-    if (result.risk.level === 'high' && result.failedTests > 0) {
+    // ── Optionally fail the action if risk is high ────────────────────────────
+    if (failOnHighRisk && result.risk.level === 'high' && result.failedTests > 0) {
         core.setFailed(`QAI: High risk — ${result.risk.reasons.join(', ')}`);
     }
 }

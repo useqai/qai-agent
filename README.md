@@ -128,6 +128,7 @@ Then add the `trace-path` input:
 | `trace-path` | ❌ | — | Glob to Playwright trace zip files. E.g. `test-results/**/*.zip` |
 | `qai-url` | ❌ | — | QAI cloud platform ingest URL for historical intelligence |
 | `qai-api-key` | ❌ | — | QAI API key (required when `qai-url` is set) |
+| `fail-on-high-risk` | ❌ | `false` | Set to `true` to fail the action step when risk is high. By default the action always passes and only reports. |
 
 ## Outputs
 
@@ -151,6 +152,13 @@ You can use outputs to conditionally block merges or trigger notifications:
 - name: Block merge on high risk
   if: steps.qai.outputs.risk-level == 'high'
   run: echo "High risk detected — review failures before merging" && exit 1
+
+# Or use the built-in input — simpler, no extra step needed:
+- name: QAI Agent
+  uses: useqai/qai-agent@v1
+  with:
+    junit-path: 'test-results/results.xml'
+    fail-on-high-risk: 'true'
 ```
 
 ---
