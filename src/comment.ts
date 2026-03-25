@@ -19,7 +19,7 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
 
   const lines: string[] = [
     COMMENT_MARKER,
-    '<img src="https://useqai.dev/favicon.ico" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
+    '<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
     '',
     `**${totalTests} tests** · **${failedTests} failed** (${failRate}% fail rate) · Risk: ${emoji} **${risk.level.charAt(0).toUpperCase() + risk.level.slice(1)}**`,
     '',
