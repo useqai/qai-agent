@@ -11,7 +11,7 @@ export async function sendToCloud(
   qaiApiKey: string,
   junitPath: string,
   ctx: GithubContext,
-): Promise<void> {
+): Promise<{ runId: string; repoId: string } | null> {
   const fileBuffer = readFileSync(junitPath)
   const filename = basename(junitPath)
 
@@ -37,6 +37,9 @@ export async function sendToCloud(
     const text = await res.text().catch(() => '')
     throw new Error(`QAI ingest failed: ${res.status} ${text}`)
   }
+
+  const data = await res.json() as { runDbId: string; repoId: string }
+  return { runId: data.runDbId, repoId: data.repoId }
 }
 
 export async function sendTraceToCloud(

@@ -12,7 +12,7 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + '…' : str
 }
 
-export function buildComment(result: AnalysisResult, traceResults: TraceRcaResult[] = [], cloudUrl?: string): string {
+export function buildComment(result: AnalysisResult, traceResults: TraceRcaResult[] = [], cloudUrl?: string, runUrl?: string): string {
   const { totalTests, failedTests, passedTests, skippedTests, clusters, risk, tests } = result
   const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0
   const emoji = RISK_EMOJI[risk.level]
@@ -71,6 +71,12 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
     for (const r of risk.reasons) {
       lines.push(`- ${r}`)
     }
+    lines.push('')
+  }
+
+  if (failedTests > 0) {
+    const fixUrl = runUrl ?? cloudUrl ?? 'https://useqai.dev'
+    lines.push(`💡 **AI fix suggestions available** → [View in QAI](${fixUrl})`)
     lines.push('')
   }
 

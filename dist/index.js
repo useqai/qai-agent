@@ -34030,7 +34030,7 @@ const RISK_EMOJI = {
 function truncate(str, max) {
     return str.length > max ? str.slice(0, max) + '…' : str;
 }
-function buildComment(result, traceResults = [], cloudUrl) {
+function buildComment(result, traceResults = [], cloudUrl, runUrl) {
     const { totalTests, failedTests, passedTests, skippedTests, clusters, risk, tests } = result;
     const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0;
     const emoji = RISK_EMOJI[risk.level];
@@ -34084,6 +34084,11 @@ function buildComment(result, traceResults = [], cloudUrl) {
         for (const r of risk.reasons) {
             lines.push(`- ${r}`);
         }
+        lines.push('');
+    }
+    if (failedTests > 0) {
+        const fixUrl = runUrl ?? cloudUrl ?? 'https://useqai.dev';
+        lines.push(`💡 **AI fix suggestions available** → [View in QAI](${fixUrl})`);
         lines.push('');
     }
     const stats = [`✅ ${passedTests} passed`, `❌ ${failedTests} failed`];
@@ -34244,11 +34249,16 @@ async function run() {
     }
     const traceResults = await (0, parse_js_1.analyzeTraces)(traceFiles);
     // ── Optional: send to QAI cloud platform ──────────────────────────────────
+    let runUrl;
     if (qaiUrl && qaiApiKey) {
+        const cloudDashboardUrl = qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '');
         for (const file of files) {
             try {
-                await (0, ingest_js_1.sendToCloud)(qaiUrl, qaiApiKey, file, ctx);
+                const cloudResult = await (0, ingest_js_1.sendToCloud)(qaiUrl, qaiApiKey, file, ctx);
                 core.info(`Sent ${file} to QAI cloud platform`);
+                if (cloudResult && !runUrl) {
+                    runUrl = `${cloudDashboardUrl}/repos/${cloudResult.repoId}/runs/${cloudResult.runId}`;
+                }
             }
             catch (err) {
                 core.warning(`Failed to send to QAI cloud: ${String(err)}`);
@@ -34269,7 +34279,7 @@ async function run() {
         const cloudDashboardUrl = qaiUrl
             ? qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
             : undefined;
-        const body = (0, comment_js_1.buildComment)(result, traceResults, cloudDashboardUrl);
+        const body = (0, comment_js_1.buildComment)(result, traceResults, cloudDashboardUrl, runUrl);
         try {
             await (0, github_js_1.upsertPrComment)(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body);
             core.info(`Posted PR comment on PR #${ctx.prNumber}`);
@@ -34331,6 +34341,8 @@ async function sendToCloud(qaiUrl, qaiApiKey, junitPath, ctx) {
         const text = await res.text().catch(() => '');
         throw new Error(`QAI ingest failed: ${res.status} ${text}`);
     }
+    const data = await res.json();
+    return { runId: data.runDbId, repoId: data.repoId };
 }
 async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx) {
     const fileBuffer = (0, node_fs_1.readFileSync)(tracePath);

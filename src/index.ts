@@ -51,11 +51,16 @@ async function run(): Promise<void> {
   const traceResults = await analyzeTraces(traceFiles)
 
   // ── Optional: send to QAI cloud platform ──────────────────────────────────
+  let runUrl: string | undefined
   if (qaiUrl && qaiApiKey) {
+    const cloudDashboardUrl = qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
     for (const file of files) {
       try {
-        await sendToCloud(qaiUrl, qaiApiKey, file, ctx)
+        const cloudResult = await sendToCloud(qaiUrl, qaiApiKey, file, ctx)
         core.info(`Sent ${file} to QAI cloud platform`)
+        if (cloudResult && !runUrl) {
+          runUrl = `${cloudDashboardUrl}/repos/${cloudResult.repoId}/runs/${cloudResult.runId}`
+        }
       } catch (err) {
         core.warning(`Failed to send to QAI cloud: ${String(err)}`)
       }
@@ -75,7 +80,7 @@ async function run(): Promise<void> {
     const cloudDashboardUrl = qaiUrl
       ? qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
       : undefined
-    const body = buildComment(result, traceResults, cloudDashboardUrl)
+    const body = buildComment(result, traceResults, cloudDashboardUrl, runUrl)
     try {
       await upsertPrComment(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body)
       core.info(`Posted PR comment on PR #${ctx.prNumber}`)
