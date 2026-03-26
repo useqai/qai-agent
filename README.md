@@ -42,9 +42,9 @@ That's it — every PR now gets a risk score, failure clusters, and a merge reco
 
 ---
 
-## Unlock historical intelligence (2 more lines)
+## Unlock historical intelligence + AI fix suggestions (2 more lines)
 
-The Action gives you per-PR insight. Add your free API key to unlock trends, flakiness tracking, and AI root cause across all your runs:
+The Action gives you per-PR insight. Add your free API key to unlock trends, flakiness tracking, AI root cause, and on-demand **AI-generated fix suggestions** for every failing test:
 
 ```yaml
 - name: QAI Agent
@@ -66,6 +66,7 @@ Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 s
 | Per-PR risk score | ✅ | ✅ |
 | Failure clusters on PR | ✅ | ✅ |
 | AI root cause (from traces) | ✅ one-liner | ✅ full explanation + evidence |
+| **AI fix suggestions per failed test** | 💡 link in PR comment | ✅ streamed live in dashboard |
 | Fail rate trends over time | — | ✅ chart across all runs |
 | Flakiness leaderboard | — | ✅ which tests waste the most time |
 | Unresolved cluster tracking | — | ✅ "first seen 3 weeks ago, 47 hits" |
