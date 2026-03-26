@@ -82,7 +82,7 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
 
   const stats = [`✅ ${passedTests} passed`, `❌ ${failedTests} failed`]
   if (skippedTests > 0) stats.push(`⏭️ ${skippedTests} skipped`)
-  lines.push(`<sub>${stats.join(' · ')}${cloudUrl ? ` · [View in dashboard](${cloudUrl})` : ''} · Powered by QAI Platform</sub>`)
+  lines.push(`<sub>${stats.join(' · ')} · Powered by QAI Platform</sub>`)
 
   return lines.join('\n')
 }
