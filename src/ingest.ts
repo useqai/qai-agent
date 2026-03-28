@@ -42,6 +42,39 @@ export async function sendToCloud(
   return { runId: data.runDbId, repoId: data.repoId }
 }
 
+export async function sendReportToCloud(
+  qaiUrl: string,
+  qaiApiKey: string,
+  reportPath: string,
+  ctx: GithubContext,
+): Promise<void> {
+  const fileBuffer = readFileSync(reportPath)
+  const filename = basename(reportPath)
+
+  const form = new FormData()
+  form.append('file', new Blob([fileBuffer], { type: 'application/json' }), filename)
+  form.append('repo', `${ctx.owner}/${ctx.repo}`)
+  form.append('sha', ctx.sha)
+  form.append('run_id', ctx.runId)
+  form.append('run_attempt', process.env.GITHUB_RUN_ATTEMPT ?? '1')
+  form.append('branch', ctx.branch)
+  if (process.env.GITHUB_WORKFLOW) form.append('workflow', process.env.GITHUB_WORKFLOW)
+  if (process.env.GITHUB_JOB) form.append('job', process.env.GITHUB_JOB)
+  if (ctx.prNumber) form.append('pr_number', String(ctx.prNumber))
+
+  const url = qaiUrl.replace(/\/$/, '') + '/ingest/playwright-report'
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${qaiApiKey}` },
+    body: form,
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`QAI playwright-report ingest failed: ${res.status} ${text}`)
+  }
+}
+
 export async function sendTraceToCloud(
   qaiUrl: string,
   qaiApiKey: string,

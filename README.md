@@ -52,9 +52,18 @@ The Action gives you per-PR insight. Add your free API key to unlock trends, fla
   if: always()
   with:
     junit-path: 'test-results/results.xml'
-    trace-path: 'test-results/**/*.zip'   # optional: Playwright traces
+    trace-path: 'test-results/**/*.zip'        # optional: Playwright traces for RCA
+    playwright-report: 'test-results/report.json'  # optional: richer AI fix suggestions
     qai-url: https://ingest.useqai.dev
     qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+Enable the JSON reporter in your Playwright config:
+```ts
+// playwright.config.ts
+export default defineConfig({
+  reporter: [['html'], ['json', { outputFile: 'test-results/report.json' }]],
+})
 ```
 
 Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 seconds.
@@ -67,6 +76,7 @@ Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 s
 | Failure clusters on PR | ✅ | ✅ |
 | AI root cause (from traces) | ✅ one-liner | ✅ full explanation + evidence |
 | **AI fix suggestions per failed test** | 💡 link in PR comment | ✅ streamed live in dashboard |
+| **Richer fixes from Playwright report** | — | ✅ exact failed step + network errors |
 | Fail rate trends over time | — | ✅ chart across all runs |
 | Flakiness leaderboard | — | ✅ which tests waste the most time |
 | Unresolved cluster tracking | — | ✅ "first seen 3 weeks ago, 47 hits" |
@@ -127,6 +137,7 @@ Then add the `trace-path` input:
 | `github-token` | ❌ | `${{ github.token }}` | Token for posting PR comments. The built-in token works for most repos. |
 | `post-comment` | ❌ | `true` | Set to `false` to skip posting the PR comment |
 | `trace-path` | ❌ | — | Glob to Playwright trace zip files. E.g. `test-results/**/*.zip` |
+| `playwright-report` | ❌ | — | Path to Playwright JSON report file (`--reporter=json` output). Enriches AI fix suggestions with step-by-step execution context. Requires `qai-url` and `qai-api-key`. |
 | `qai-url` | ❌ | — | QAI cloud platform ingest URL for historical intelligence |
 | `qai-api-key` | ❌ | — | QAI API key (required when `qai-url` is set) |
 | `fail-on-high-risk` | ❌ | `false` | Set to `true` to fail the action step when risk is high. By default the action always passes and only reports. |

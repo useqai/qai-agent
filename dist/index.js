@@ -34220,6 +34220,7 @@ async function run() {
     const qaiUrl = core.getInput('qai-url');
     const qaiApiKey = core.getInput('qai-api-key');
     const tracePath = core.getInput('trace-path');
+    const playwrightReport = core.getInput('playwright-report');
     const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true';
     // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
     const globber = await glob.create(junitPath);
@@ -34273,6 +34274,15 @@ async function run() {
                 core.warning(`Failed to send trace to QAI cloud: ${String(err)}`);
             }
         }
+        if (playwrightReport) {
+            try {
+                await (0, ingest_js_1.sendReportToCloud)(qaiUrl, qaiApiKey, playwrightReport, ctx);
+                core.info(`Sent Playwright report ${playwrightReport} to QAI cloud platform`);
+            }
+            catch (err) {
+                core.warning(`Failed to send Playwright report to QAI cloud: ${String(err)}`);
+            }
+        }
     }
     // ── Post PR comment ────────────────────────────────────────────────────────
     if (postComment && ctx.prNumber) {
@@ -34308,6 +34318,7 @@ run().catch(err => core.setFailed(String(err)));
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sendToCloud = sendToCloud;
+exports.sendReportToCloud = sendReportToCloud;
 exports.sendTraceToCloud = sendTraceToCloud;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
@@ -34343,6 +34354,33 @@ async function sendToCloud(qaiUrl, qaiApiKey, junitPath, ctx) {
     }
     const data = await res.json();
     return { runId: data.runDbId, repoId: data.repoId };
+}
+async function sendReportToCloud(qaiUrl, qaiApiKey, reportPath, ctx) {
+    const fileBuffer = (0, node_fs_1.readFileSync)(reportPath);
+    const filename = (0, node_path_1.basename)(reportPath);
+    const form = new FormData();
+    form.append('file', new Blob([fileBuffer], { type: 'application/json' }), filename);
+    form.append('repo', `${ctx.owner}/${ctx.repo}`);
+    form.append('sha', ctx.sha);
+    form.append('run_id', ctx.runId);
+    form.append('run_attempt', process.env.GITHUB_RUN_ATTEMPT ?? '1');
+    form.append('branch', ctx.branch);
+    if (process.env.GITHUB_WORKFLOW)
+        form.append('workflow', process.env.GITHUB_WORKFLOW);
+    if (process.env.GITHUB_JOB)
+        form.append('job', process.env.GITHUB_JOB);
+    if (ctx.prNumber)
+        form.append('pr_number', String(ctx.prNumber));
+    const url = qaiUrl.replace(/\/$/, '') + '/ingest/playwright-report';
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${qaiApiKey}` },
+        body: form,
+    });
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`QAI playwright-report ingest failed: ${res.status} ${text}`);
+    }
 }
 async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx) {
     const fileBuffer = (0, node_fs_1.readFileSync)(tracePath);

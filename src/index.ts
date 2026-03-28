@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { parseJunitXml, analyze, analyzeTraces } from './parse.js'
 import { buildComment } from './comment.js'
 import { getGithubContext, upsertPrComment } from './github.js'
-import { sendToCloud, sendTraceToCloud } from './ingest.js'
+import { sendToCloud, sendTraceToCloud, sendReportToCloud } from './ingest.js'
 
 async function run(): Promise<void> {
   const junitPath = core.getInput('junit-path', { required: true })
@@ -13,6 +13,7 @@ async function run(): Promise<void> {
   const qaiUrl = core.getInput('qai-url')
   const qaiApiKey = core.getInput('qai-api-key')
   const tracePath = core.getInput('trace-path')
+  const playwrightReport = core.getInput('playwright-report')
   const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true'
 
   // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
@@ -71,6 +72,14 @@ async function run(): Promise<void> {
         core.info(`Sent trace ${trace} to QAI cloud platform`)
       } catch (err) {
         core.warning(`Failed to send trace to QAI cloud: ${String(err)}`)
+      }
+    }
+    if (playwrightReport) {
+      try {
+        await sendReportToCloud(qaiUrl, qaiApiKey, playwrightReport, ctx)
+        core.info(`Sent Playwright report ${playwrightReport} to QAI cloud platform`)
+      } catch (err) {
+        core.warning(`Failed to send Playwright report to QAI cloud: ${String(err)}`)
       }
     }
   }

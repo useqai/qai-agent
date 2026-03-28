@@ -27,6 +27,9 @@ inputs:
   trace-path:
     description: 'Glob to Playwright trace zip files for RCA analysis, e.g. "test-results/**/*.zip"'
     required: false
+  playwright-report:
+    description: 'Path to Playwright JSON report file for richer AI fix suggestions, e.g. "test-results/report.json". Requires qai-url and qai-api-key.'
+    required: false
   fail-on-high-risk:
     description: 'Fail the action step when risk level is high (true/false). Default false — the action reports but never blocks.'
     required: false
