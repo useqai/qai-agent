@@ -34575,6 +34575,7 @@ async function parseTraceZip(zipBuffer) {
     const networkEvents = [];
     const consoleEvents = [];
     for (const entry of zip.getEntries().filter(e => e.entryName.endsWith('.trace'))) {
+        const beforeMap = new Map();
         for (const line of entry.getData().toString('utf-8').split('\n').filter(l => l.trim())) {
             let ev;
             try {
@@ -34583,7 +34584,33 @@ async function parseTraceZip(zipBuffer) {
             catch {
                 continue;
             }
-            if (ev['type'] === 'action') {
+            if (ev['type'] === 'before') {
+                // Modern Playwright: accumulate 'before' events keyed by callId
+                const callId = ev['callId'];
+                if (callId)
+                    beforeMap.set(callId, ev);
+            }
+            else if (ev['type'] === 'after') {
+                // Pair with stored 'before' to reconstruct the action
+                const callId = ev['callId'];
+                const before = callId ? beforeMap.get(callId) : undefined;
+                if (before) {
+                    beforeMap.delete(callId);
+                    const params = before['params'];
+                    const errObj = ev['error'];
+                    const start = (before['startTime'] ?? before['wallTime'] ?? 0);
+                    const end = (ev['endTime'] ?? start);
+                    steps.push({
+                        action: (before['apiName'] ?? [before['class'], before['method']].filter(Boolean).join('.') ?? 'unknown'),
+                        locator: params?.['selector'],
+                        timestamp: start,
+                        durationMs: end - start,
+                        error: errObj?.['message'],
+                    });
+                }
+            }
+            else if (ev['type'] === 'action') {
+                // Legacy format fallback
                 const params = ev['params'];
                 const error = ev['error'];
                 const start = (ev['startTime'] ?? ev['wallTime'] ?? 0);
@@ -34640,7 +34667,9 @@ async function analyzeTraces(tracePaths) {
         const buf = (0, node_fs_1.readFileSync)(tp);
         const trace = await parseTraceZip(buf);
         const rca = runRcaDetectors(trace);
-        results.push({ traceFile: (0, node_path_1.basename)(tp), ...rca });
+        const dirName = (0, node_path_1.basename)((0, node_path_1.dirname)(tp));
+        const traceFile = dirName !== '.' ? dirName : (0, node_path_1.basename)(tp);
+        results.push({ traceFile, ...rca });
     }
     return results;
 }

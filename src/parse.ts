@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { basename } from 'node:path'
+import { basename, dirname } from 'node:path'
 import AdmZip from 'adm-zip'
 
 // ─── Test Status ──────────────────────────────────────────────────────────────
@@ -242,11 +242,35 @@ async function parseTraceZip(zipBuffer: Buffer): Promise<ParsedTrace> {
   const consoleEvents: TraceConsoleEvent[] = []
 
   for (const entry of zip.getEntries().filter(e => e.entryName.endsWith('.trace'))) {
+    const beforeMap = new Map<string, Record<string, unknown>>()
     for (const line of entry.getData().toString('utf-8').split('\n').filter(l => l.trim())) {
       let ev: Record<string, unknown>
       try { ev = JSON.parse(line) as Record<string, unknown> } catch { continue }
 
-      if (ev['type'] === 'action') {
+      if (ev['type'] === 'before') {
+        // Modern Playwright: accumulate 'before' events keyed by callId
+        const callId = ev['callId'] as string | undefined
+        if (callId) beforeMap.set(callId, ev)
+      } else if (ev['type'] === 'after') {
+        // Pair with stored 'before' to reconstruct the action
+        const callId = ev['callId'] as string | undefined
+        const before = callId ? beforeMap.get(callId) : undefined
+        if (before) {
+          beforeMap.delete(callId!)
+          const params = before['params'] as Record<string, unknown> | undefined
+          const errObj = ev['error'] as Record<string, unknown> | undefined
+          const start = (before['startTime'] ?? before['wallTime'] ?? 0) as number
+          const end = (ev['endTime'] ?? start) as number
+          steps.push({
+            action: (before['apiName'] ?? [before['class'], before['method']].filter(Boolean).join('.') ?? 'unknown') as string,
+            locator: params?.['selector'] as string | undefined,
+            timestamp: start,
+            durationMs: end - start,
+            error: errObj?.['message'] as string | undefined,
+          })
+        }
+      } else if (ev['type'] === 'action') {
+        // Legacy format fallback
         const params = ev['params'] as Record<string, unknown> | undefined
         const error = ev['error'] as Record<string, unknown> | undefined
         const start = (ev['startTime'] ?? ev['wallTime'] ?? 0) as number
@@ -302,7 +326,9 @@ export async function analyzeTraces(tracePaths: string[]): Promise<TraceRcaResul
     const buf = readFileSync(tp)
     const trace = await parseTraceZip(buf)
     const rca = runRcaDetectors(trace)
-    results.push({ traceFile: basename(tp), ...rca })
+    const dirName = basename(dirname(tp))
+    const traceFile = dirName !== '.' ? dirName : basename(tp)
+    results.push({ traceFile, ...rca })
   }
   return results
 }
