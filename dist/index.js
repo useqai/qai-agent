@@ -34384,7 +34384,10 @@ async function sendReportToCloud(qaiUrl, qaiApiKey, reportPath, ctx) {
 }
 async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx) {
     const fileBuffer = (0, node_fs_1.readFileSync)(tracePath);
-    const filename = (0, node_path_1.basename)(tracePath);
+    // Use parent directory name as filename to make each trace unique and encode the test name.
+    // e.g. cart-Cart-added-item-appears-in-cart-chromium/trace.zip → cart-Cart-added-item-appears-in-cart-chromium.zip
+    const dirName = (0, node_path_1.basename)((0, node_path_1.dirname)(tracePath));
+    const filename = dirName !== '.' ? `${dirName}.zip` : (0, node_path_1.basename)(tracePath);
     const form = new FormData();
     form.append('file', new Blob([fileBuffer], { type: 'application/zip' }), filename);
     form.append('repo', `${ctx.owner}/${ctx.repo}`);

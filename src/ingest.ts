@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { basename } from 'node:path'
+import { basename, dirname } from 'node:path'
 import type { GithubContext } from './github.js'
 
 /**
@@ -82,7 +82,10 @@ export async function sendTraceToCloud(
   ctx: GithubContext,
 ): Promise<void> {
   const fileBuffer = readFileSync(tracePath)
-  const filename = basename(tracePath)
+  // Use parent directory name as filename to make each trace unique and encode the test name.
+  // e.g. cart-Cart-added-item-appears-in-cart-chromium/trace.zip → cart-Cart-added-item-appears-in-cart-chromium.zip
+  const dirName = basename(dirname(tracePath))
+  const filename = dirName !== '.' ? `${dirName}.zip` : basename(tracePath)
 
   const form = new FormData()
   form.append('file', new Blob([fileBuffer], { type: 'application/zip' }), filename)
