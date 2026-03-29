@@ -2,6 +2,8 @@
 
 **Test intelligence for every pull request.**
 
+[![Get free API key](https://img.shields.io/badge/useqai.dev-Get%20free%20API%20key-brightgreen)](https://useqai.dev)
+
 QAI Agent is a GitHub Action that automatically analyzes your CI test failures and posts an intelligent summary directly on your pull request.
 
 ---
@@ -66,7 +68,7 @@ export default defineConfig({
 })
 ```
 
-Get your free API key at [useqai.dev](https://useqai.dev) — sign up takes 30 seconds.
+Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 
 ### What you unlock
 
