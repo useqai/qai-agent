@@ -34213,6 +34213,7 @@ const parse_js_1 = __nccwpck_require__(2828);
 const comment_js_1 = __nccwpck_require__(2246);
 const github_js_1 = __nccwpck_require__(9248);
 const ingest_js_1 = __nccwpck_require__(5727);
+const slack_js_1 = __nccwpck_require__(6691);
 async function run() {
     const junitPath = core.getInput('junit-path', { required: true });
     const githubToken = core.getInput('github-token');
@@ -34222,6 +34223,7 @@ async function run() {
     const tracePath = core.getInput('trace-path');
     const playwrightReport = core.getInput('playwright-report');
     const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true';
+    const slackWebhookUrl = core.getInput('slack-webhook-url');
     // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
     const globber = await glob.create(junitPath);
     const files = await globber.glob();
@@ -34300,6 +34302,16 @@ async function run() {
     }
     else if (postComment && !ctx.prNumber) {
         core.info('Not a PR event — skipping comment');
+    }
+    // ── Optional: Slack alert for high-risk PRs (free tier) ───────────────────
+    if (slackWebhookUrl && result.risk.level === 'high' && ctx.prNumber) {
+        try {
+            await (0, slack_js_1.postSlackAlert)(slackWebhookUrl, ctx, result.risk, result.failedTests);
+            core.info('Posted high-risk Slack alert');
+        }
+        catch (err) {
+            core.warning(`Failed to post Slack alert: ${String(err)}`);
+        }
     }
     // ── Optionally fail the action if risk is high ────────────────────────────
     if (failOnHighRisk && result.risk.level === 'high' && result.failedTests > 0) {
@@ -34672,6 +34684,41 @@ async function analyzeTraces(tracePaths) {
         results.push({ traceFile, ...rca });
     }
     return results;
+}
+
+
+/***/ }),
+
+/***/ 6691:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.postSlackAlert = postSlackAlert;
+/**
+ * Post a basic high-risk PR alert to a Slack incoming webhook.
+ * Free-tier: plain text only, no cluster trends or AI analysis.
+ * For richer alerts (cluster counts, risk reasons, dashboard link), use the QAI platform.
+ */
+async function postSlackAlert(webhookUrl, ctx, riskOutput, failedTests) {
+    const prUrl = `https://github.com/${ctx.owner}/${ctx.repo}/pull/${ctx.prNumber}`;
+    const text = [
+        `🔴 High Risk PR detected`,
+        `*PR #${ctx.prNumber}* in \`${ctx.owner}/${ctx.repo}\``,
+        `Risk: ${riskOutput.level} (score: ${riskOutput.score.toFixed(2)})`,
+        `${failedTests} test failure${failedTests !== 1 ? 's' : ''} detected`,
+        `→ View PR: <${prUrl}>`,
+        `→ Get cluster trends, AI RCA & PR history at useqai.dev`,
+    ].join('\n');
+    const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+        throw new Error(`Slack webhook failed: ${res.status} ${res.statusText}`);
+    }
 }
 
 

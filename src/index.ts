@@ -5,6 +5,7 @@ import { parseJunitXml, analyze, analyzeTraces } from './parse.js'
 import { buildComment } from './comment.js'
 import { getGithubContext, upsertPrComment } from './github.js'
 import { sendToCloud, sendTraceToCloud, sendReportToCloud } from './ingest.js'
+import { postSlackAlert } from './slack.js'
 
 async function run(): Promise<void> {
   const junitPath = core.getInput('junit-path', { required: true })
@@ -15,6 +16,7 @@ async function run(): Promise<void> {
   const tracePath = core.getInput('trace-path')
   const playwrightReport = core.getInput('playwright-report')
   const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true'
+  const slackWebhookUrl = core.getInput('slack-webhook-url')
 
   // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
   const globber = await glob.create(junitPath)
@@ -98,6 +100,16 @@ async function run(): Promise<void> {
     }
   } else if (postComment && !ctx.prNumber) {
     core.info('Not a PR event — skipping comment')
+  }
+
+  // ── Optional: Slack alert for high-risk PRs (free tier) ───────────────────
+  if (slackWebhookUrl && result.risk.level === 'high' && ctx.prNumber) {
+    try {
+      await postSlackAlert(slackWebhookUrl, ctx, result.risk, result.failedTests)
+      core.info('Posted high-risk Slack alert')
+    } catch (err) {
+      core.warning(`Failed to post Slack alert: ${String(err)}`)
+    }
   }
 
   // ── Optionally fail the action if risk is high ────────────────────────────

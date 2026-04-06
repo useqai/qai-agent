@@ -34,6 +34,9 @@ inputs:
     description: 'Fail the action step when risk level is high (true/false). Default false — the action reports but never blocks.'
     required: false
     default: 'false'
+  slack-webhook-url:
+    description: 'Slack incoming webhook URL. When provided, posts a plain-text High Risk alert when risk level is high. For richer alerts with cluster trends and AI analysis, use the QAI platform.'
+    required: false
 
 outputs:
   risk-level:
