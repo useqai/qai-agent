@@ -79,11 +79,12 @@ Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 | AI root cause (from traces) | ✅ one-liner | ✅ full explanation + evidence |
 | **AI fix suggestions per failed test** | 💡 link in PR comment | ✅ streamed live in dashboard |
 | **Richer fixes from Playwright report** | — | ✅ exact failed step + network errors |
+| Slack alert on high risk | ✅ basic (PR link + count) | ✅ rich (cluster count, reasons, dashboard link) |
 | Fail rate trends over time | — | ✅ chart across all runs |
 | Flakiness leaderboard | — | ✅ which tests waste the most time |
 | Unresolved cluster tracking | — | ✅ "first seen 3 weeks ago, 47 hits" |
 | Cross-repo visibility | — | ✅ org-level stats |
-| Slack & Jira integration | — | ✅ |
+| Jira ticket creation | — | ✅ |
 
 ---
 
@@ -131,6 +132,34 @@ Then add the `trace-path` input:
 
 ---
 
+## Slack alerts
+
+When `slack-webhook-url` is set, a plain-text alert fires on every high-risk PR:
+
+```
+🔴 High Risk PR detected
+*PR #22* in `owner/repo`
+Risk: high (score: 0.73)
+8 test failures detected
+→ View PR: <github url>
+→ Get cluster trends, AI RCA & PR history at useqai.dev
+```
+
+```yaml
+- name: QAI Agent
+  uses: useqai/qai-agent@v1
+  if: always()
+  with:
+    junit-path: 'test-results/results.xml'
+    slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+```
+
+Store the webhook URL as a repository secret. [Create a Slack incoming webhook](https://api.slack.com/messaging/webhooks) in your workspace settings.
+
+Platform users (with `qai-url` + `qai-api-key`) get a richer Slack message that includes cluster counts, risk reasons, merge recommendation, and a direct link to the QAI dashboard.
+
+---
+
 ## Inputs
 
 | Input | Required | Default | Description |
@@ -143,6 +172,7 @@ Then add the `trace-path` input:
 | `qai-url` | ❌ | — | QAI cloud platform ingest URL for historical intelligence |
 | `qai-api-key` | ❌ | — | QAI API key (required when `qai-url` is set) |
 | `fail-on-high-risk` | ❌ | `false` | Set to `true` to fail the action step when risk is high. By default the action always passes and only reports. |
+| `slack-webhook-url` | ❌ | — | Slack incoming webhook URL. When set, posts a plain-text High Risk alert to Slack whenever risk level is `high`. For richer alerts with cluster counts, risk reasons, and a dashboard deep link, use the QAI platform. |
 
 ## Outputs
 
