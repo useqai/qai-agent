@@ -1,5 +1,5 @@
-name: 'QAI Test Intelligence'
-description: 'JUnit failure clustering, PR risk scoring, and Playwright trace RCA. Posts intelligent summaries on every pull request.'
+name: 'QAI Agent'
+description: 'Turn CI failures into merge decisions. QAI clusters failures, scores PR risk, and posts an AI-powered verdict with fix suggestions directly on the pull request.'
 author: 'QAI Platform'
 
 branding:
