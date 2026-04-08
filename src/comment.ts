@@ -80,6 +80,21 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
     lines.push('')
   }
 
+  if (cloudUrl) {
+    lines.push('---')
+    lines.push('💬 **Ask QAI anything about this PR:**')
+    lines.push('Comment `@qai-agent <your question>` — examples:')
+    lines.push('- `@qai-agent why is this failing?`')
+    lines.push('- `@qai-agent is this flaky or a real regression?`')
+    lines.push('- `@qai-agent what\'s the fastest fix?`')
+    lines.push('')
+  } else {
+    lines.push('---')
+    lines.push('💡 **Want AI-powered answers about these failures?**')
+    lines.push('Connect your free API key at [useqai.dev](https://useqai.dev) to ask `@qai-agent` questions directly in this PR.')
+    lines.push('')
+  }
+
   const stats = [`✅ ${passedTests} passed`, `❌ ${failedTests} failed`]
   if (skippedTests > 0) stats.push(`⏭️ ${skippedTests} skipped`)
   lines.push(`<sub>${stats.join(' · ')} · Powered by QAI Platform</sub>`)

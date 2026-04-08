@@ -132,6 +132,28 @@ Then add the `trace-path` input:
 
 ---
 
+## Ask QAI in your PR
+
+Once connected to the dashboard, ask QAI questions directly in any PR comment:
+
+```
+@qai-agent why is this test failing?
+@qai-agent is this the same failure we saw last week?
+@qai-agent what's the fastest fix for the cart failures?
+@qai-agent is this flaky or a real regression?
+```
+
+QAI replies with an AI-powered answer using your full failure context — RCA analysis, historical cluster data, confidence scores, and fix suggestions.
+
+> **Requires a QAI Platform account.**
+> QAI needs access to your failure history to answer questions accurately.
+> Get your free API key at [useqai.dev](https://useqai.dev) — 30 seconds, no credit card.
+
+Without a connected API key, QAI will reply with a prompt to register.
+All other Action features (PR comment, risk scoring, clustering) work without an account.
+
+---
+
 ## Slack alerts
 
 When `slack-webhook-url` is set, a plain-text alert fires on every high-risk PR:
