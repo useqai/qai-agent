@@ -145,12 +145,31 @@ Once connected to the dashboard, ask QAI questions directly in any PR comment:
 
 QAI replies with an AI-powered answer using your full failure context — RCA analysis, historical cluster data, confidence scores, and fix suggestions.
 
-> **Requires a QAI Platform account.**
-> QAI needs access to your failure history to answer questions accurately.
-> Get your free API key at [useqai.dev](https://useqai.dev) — 30 seconds, no credit card.
+### Setup (one-time per repository)
 
-Without a connected API key, QAI will reply with a prompt to register.
-All other Action features (PR comment, risk scoring, clustering) work without an account.
+**Step 1 — Install the QAI GitHub App**
+
+👉 [Install QAI Platform on your repo](https://github.com/apps/qai-platform)
+
+This allows QAI to listen for `@qai-agent` mentions in your PR comments and respond with AI-powered answers. Without this, QAI cannot receive or reply to comments.
+
+**Step 2 — Connect your free API key**
+
+Get your free API key at [useqai.dev](https://useqai.dev) — 30 seconds, no credit card.
+
+Add `qai-url` and `qai-api-key` to your workflow step:
+```yaml
+- name: QAI Agent
+  uses: useqai/qai-agent@v1
+  if: always()
+  with:
+    junit-path: 'test-results/results.xml'
+    qai-url: https://ingest.useqai.dev
+    qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+> Both steps are required for `@qai-agent` replies to work.
+> All other Action features (PR comment, risk scoring, clustering) work without an account or the GitHub App installed.
 
 ---
 
