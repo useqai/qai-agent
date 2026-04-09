@@ -90,9 +90,9 @@ Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 
 ## Example PR comment
 
-→ **[See a live PR comment on this repo](https://github.com/useqai/qai-agent/pull/9)**
+→ **[See a live PR comment on this repo](https://github.com/useqai/qai-agent/pull/12)**
 
-![QAI Agent PR comment example](https://github.com/user-attachments/assets/983d61bc-8337-4883-ae98-93ea66e9ec64)
+![QAI Agent PR comment example](https://github.com/user-attachments/assets/273f7565-3613-413e-b7d6-b590117bc4cf)
 
 ---
 
