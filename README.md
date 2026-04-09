@@ -84,7 +84,6 @@ Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 | Flakiness leaderboard | — | ✅ which tests waste the most time |
 | Unresolved cluster tracking | — | ✅ "first seen 3 weeks ago, 47 hits" |
 | Cross-repo visibility | — | ✅ org-level stats |
-| Jira ticket creation | — | ✅ |
 | **Ask QAI in PR comments** (`@qai-agent`) | — | ✅ AI answers using full failure context |
 
 ---
