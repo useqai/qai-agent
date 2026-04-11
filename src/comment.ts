@@ -54,11 +54,12 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
     lines.push('')
   }
 
-  if (traceResults.length > 0) {
+  const rcaResults = traceResults.filter(t => t.cause !== 'Unknown' && t.confidence > 0)
+  if (rcaResults.length > 0) {
     lines.push('### RCA Analysis (from Playwright traces)')
     lines.push('| Trace | Cause | Confidence | Suggestion |')
     lines.push('|---|---|---|---|')
-    for (const t of traceResults.slice(0, 5)) {
+    for (const t of rcaResults.slice(0, 5)) {
       const pct = Math.round(t.confidence * 100)
       const suggestion = truncate(t.suggestions[0] ?? '—', 80)
       lines.push(`| \`${t.traceFile}\` | ${t.cause} | ${pct}% | ${suggestion} |`)
