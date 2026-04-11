@@ -271,6 +271,43 @@ Any framework that outputs JUnit XML:
 
 ---
 
+## Security & Permissions
+
+### What QAI Agent accesses
+
+| | |
+|---|---|
+| Your test result files (JUnit XML, Playwright traces) | ✅ read-only |
+| Posts a comment on your pull request | ✅ |
+| Sends failure data to QAI Platform (opt-in only) | ✅ optional |
+| Your source code | ❌ never |
+| Your secrets or environment variables | ❌ never |
+| Your repository settings | ❌ never |
+
+### Permissions explained
+
+```yaml
+permissions:
+  pull-requests: write  # to post the analysis comment on your PR
+  contents: read        # to read test result files from the workspace
+```
+
+`pull-requests: write` is scoped strictly to the PR that triggered the workflow — no access to other PRs, repositories, or settings.
+
+When you opt in to the cloud platform (`qai-url` + `qai-api-key`), only test names, error messages, and CI run metadata are sent. **Your source code is never sent.**
+
+QAI Agent is fully open source — every line that runs in your CI is publicly auditable at [github.com/useqai/qai-agent](https://github.com/useqai/qai-agent).
+
+### Try it risk-free
+
+Not ready to connect your real pipeline? Fork [tomerli/demo-shop](https://github.com/tomerli/demo-shop) — QAI is already wired up. See exactly what it does before connecting anything of your own.
+
+### Questions or concerns
+
+Open an issue or email [hello@useqai.dev](mailto:hello@useqai.dev).
+
+---
+
 ## License
 
 MIT
