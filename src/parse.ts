@@ -16,6 +16,7 @@ export interface ParsedTestCase {
   durationMs: number
   errorMessage: string | undefined
   errorStack: string | undefined
+  clusterMessage: string | undefined  // actual error type, used for clustering (not display)
 }
 
 // ─── JUnit XML parser (inlined from analysis-worker/src/parsers/junit.ts) ────
@@ -58,12 +59,17 @@ function toArray<T>(val: T | T[] | undefined): T[] {
   return Array.isArray(val) ? val : [val]
 }
 
-function extractFailure(tc: RawTestCase): { message: string; stack: string } | null {
+function extractFailure(tc: RawTestCase): { message: string; stack: string; clusterMessage: string } | null {
   const raw = toArray(tc.failure)[0] ?? toArray(tc.error)[0]
   if (!raw) return null
   const message = raw['@_message'] ?? raw['#text']?.split('\n')[0] ?? 'Unknown error'
   const stack = raw['#text'] ?? message
-  return { message: message.slice(0, 2000), stack: stack.slice(0, 10_000) }
+  // Extract the actual error line from the stack body for clustering
+  // (skip the header line which contains the test name/location)
+  const stackLines = (raw['#text'] ?? '').split('\n').map(l => l.trim()).filter(Boolean)
+  const errorLine = stackLines.find(l => l.startsWith('Error:') || l.startsWith('Test timeout') || l.startsWith('expect('))
+  const clusterMessage = errorLine ?? message
+  return { message: message.slice(0, 2000), stack: stack.slice(0, 10_000), clusterMessage: clusterMessage.slice(0, 500) }
 }
 
 function parseSuite(suite: RawTestSuite): ParsedTestCase[] {
@@ -84,6 +90,7 @@ function parseSuite(suite: RawTestSuite): ParsedTestCase[] {
       durationMs: tc['@_time'] ? Math.round(parseFloat(String(tc['@_time'])) * 1000) : 0,
       errorMessage: failure?.message,
       errorStack: failure?.stack,
+      clusterMessage: failure?.clusterMessage,
     }
   })
 }
@@ -195,9 +202,10 @@ export function analyze(tests: ParsedTestCase[]): AnalysisResult {
   const clusterMap = new Map<string, Cluster>()
 
   for (const test of tests) {
-    if (test.status === 'failed' && test.errorMessage) {
-      const hash = buildSignatureHash(test.errorMessage)
-      const normalized = normalizeMessage(test.errorMessage)
+    if (test.status === 'failed' && (test.clusterMessage ?? test.errorMessage)) {
+      const msgForClustering = test.clusterMessage ?? test.errorMessage ?? ''
+      const hash = buildSignatureHash(msgForClustering)
+      const normalized = normalizeMessage(msgForClustering)
       const existing = clusterMap.get(hash)
       if (existing) {
         existing.tests.push(test)
