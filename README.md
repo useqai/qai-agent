@@ -314,6 +314,10 @@ QAI Agent is fully open source — every line that runs in your CI is publicly a
 
 Open an issue or email [hello@useqai.dev](mailto:hello@useqai.dev).
 
+### Try it risk-free
+
+Not ready to connect your real pipeline? Fork [useqai/demo-shop](https://github.com/useqai/demo-shop) — QAI is already wired up. See exactly what it does before connecting anything of your own.
+
 ---
 
 ## License
