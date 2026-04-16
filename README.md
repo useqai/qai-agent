@@ -8,6 +8,18 @@ QAI Agent is a GitHub Action that automatically analyzes your CI test failures a
 
 ---
 
+## Try it in 60 seconds — no setup required
+
+Fork [`useqai/demo-shop`](https://github.com/useqai/demo-shop) — a sample e-commerce app with Playwright tests already wired up. Add your API key and open a PR to see QAI in action on real failures.
+
+1. **Fork** [useqai/demo-shop](https://github.com/useqai/demo-shop/fork)
+2. **Add secret** — `QAI_API_KEY` → your key from [useqai.dev/settings/api-keys](https://useqai.dev/settings/api-keys)
+3. **Open a PR** — any small change triggers the workflow automatically
+
+You'll get a risk score, failure clusters, and AI root cause analysis on your PR — no config needed.
+
+---
+
 ## Quick start
 
 Add this step to your existing workflow, after your tests run:
