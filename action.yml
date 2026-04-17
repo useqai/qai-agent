@@ -1,5 +1,5 @@
 name: 'QAI Agent'
-description: 'Turn CI failures into merge decisions. QAI clusters failures, scores PR risk, and posts an AI-powered verdict with fix suggestions directly on the pull request.'
+description: 'Stop guessing why CI failed. QAI posts root cause, fix suggestions, and a merge verdict directly on your PR — automatically.'
 author: 'QAI Platform'
 
 branding:

@@ -1,6 +1,6 @@
 # QAI Agent
 
-**Test intelligence for every pull request.**
+**Stop guessing why CI failed. QAI posts root cause, fix suggestions, and a merge verdict directly on your PR — automatically.**
 
 [![Get free API key](https://img.shields.io/badge/useqai.dev-Get%20free%20API%20key-brightgreen)](https://useqai.dev)
 
