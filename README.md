@@ -16,6 +16,8 @@ Fork [`useqai/demo-shop`](https://github.com/useqai/demo-shop) — a sample e-co
 2. **Add secret** — `QAI_API_KEY` → your key from [useqai.dev/settings/api-keys](https://useqai.dev/settings/api-keys)
 3. **Open a PR** — any small change triggers the workflow automatically
 
+   > ⚠️ When creating the PR, set base repository to your fork, not `useqai/demo-shop`.
+
 You'll get a risk score, failure clusters, and AI root cause analysis on your PR — no config needed.
 
 ---
