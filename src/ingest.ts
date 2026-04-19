@@ -25,6 +25,8 @@ export async function sendToCloud(
   if (process.env.GITHUB_WORKFLOW) form.append('workflow', process.env.GITHUB_WORKFLOW)
   if (process.env.GITHUB_JOB) form.append('job', process.env.GITHUB_JOB)
   if (ctx.prNumber) form.append('pr_number', String(ctx.prNumber))
+  if (process.env.GITHUB_RUN_STARTED_AT) form.append('started_at', process.env.GITHUB_RUN_STARTED_AT)
+  form.append('completed_at', new Date().toISOString())
 
   const url = qaiUrl.replace(/\/$/, '') + '/ingest/junit'
   const res = await fetch(url, {
