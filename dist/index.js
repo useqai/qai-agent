@@ -34273,7 +34273,7 @@ async function run() {
         const cloudDashboardUrl = qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '');
         for (const file of files) {
             try {
-                const cloudResult = await (0, ingest_js_1.sendToCloud)(qaiUrl, qaiApiKey, file, ctx);
+                const cloudResult = await (0, ingest_js_1.sendToCloud)(qaiUrl, qaiApiKey, file, ctx, githubToken);
                 core.info(`Sent ${file} to QAI cloud platform`);
                 if (cloudResult && !runUrl) {
                     runUrl = `${cloudDashboardUrl}/repos/${cloudResult.repoId}/runs/${cloudResult.runId}`;
@@ -34351,10 +34351,30 @@ exports.sendTraceToCloud = sendTraceToCloud;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
 /**
+ * Fetch the actual workflow run start time from the GitHub API.
+ * Falls back to GITHUB_RUN_STARTED_AT env var, then null.
+ */
+async function fetchRunStartedAt(token, owner, repo, runId) {
+    if (process.env.GITHUB_RUN_STARTED_AT)
+        return process.env.GITHUB_RUN_STARTED_AT;
+    try {
+        const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/runs/${runId}`, {
+            headers: { Authorization: `Bearer ${token}`, 'X-GitHub-Api-Version': '2022-11-28', Accept: 'application/vnd.github+json' },
+        });
+        if (!res.ok)
+            return null;
+        const data = await res.json();
+        return data.run_started_at ?? null;
+    }
+    catch {
+        return null;
+    }
+}
+/**
  * Optionally send the raw JUnit XML to the QAI cloud ingest endpoint.
  * Mirrors the manual curl: POST /ingest/junit with multipart form data.
  */
-async function sendToCloud(qaiUrl, qaiApiKey, junitPath, ctx) {
+async function sendToCloud(qaiUrl, qaiApiKey, junitPath, ctx, githubToken) {
     const fileBuffer = (0, node_fs_1.readFileSync)(junitPath);
     const filename = (0, node_path_1.basename)(junitPath);
     const form = new FormData();
@@ -34370,8 +34390,9 @@ async function sendToCloud(qaiUrl, qaiApiKey, junitPath, ctx) {
         form.append('job', process.env.GITHUB_JOB);
     if (ctx.prNumber)
         form.append('pr_number', String(ctx.prNumber));
-    if (process.env.GITHUB_RUN_STARTED_AT)
-        form.append('started_at', process.env.GITHUB_RUN_STARTED_AT);
+    const startedAt = githubToken ? await fetchRunStartedAt(githubToken, ctx.owner, ctx.repo, ctx.runId) : null;
+    if (startedAt)
+        form.append('started_at', startedAt);
     form.append('completed_at', new Date().toISOString());
     const url = qaiUrl.replace(/\/$/, '') + '/ingest/junit';
     const res = await fetch(url, {

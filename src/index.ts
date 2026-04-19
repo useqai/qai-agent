@@ -59,7 +59,7 @@ async function run(): Promise<void> {
     const cloudDashboardUrl = qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
     for (const file of files) {
       try {
-        const cloudResult = await sendToCloud(qaiUrl, qaiApiKey, file, ctx)
+        const cloudResult = await sendToCloud(qaiUrl, qaiApiKey, file, ctx, githubToken)
         core.info(`Sent ${file} to QAI cloud platform`)
         if (cloudResult && !runUrl) {
           runUrl = `${cloudDashboardUrl}/repos/${cloudResult.repoId}/runs/${cloudResult.runId}`
