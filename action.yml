@@ -34,6 +34,10 @@ inputs:
     description: 'Fail the action step when risk level is high (true/false). Default false — the action reports but never blocks.'
     required: false
     default: 'false'
+  suite-name:
+    description: 'Display name for this test suite (e.g. "Selenium Python", "WebdriverIO"). When set, each suite gets its own PR comment instead of overwriting others.'
+    required: false
+    default: ''
   slack-webhook-url:
     description: 'Slack incoming webhook URL. When provided, posts a plain-text High Risk alert when risk level is high. For richer alerts with cluster trends and AI analysis, use the QAI platform.'
     required: false

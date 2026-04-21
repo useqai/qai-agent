@@ -17,6 +17,7 @@ async function run(): Promise<void> {
   const playwrightReport = core.getInput('playwright-report')
   const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true'
   const slackWebhookUrl = core.getInput('slack-webhook-url')
+  const suiteName = core.getInput('suite-name') || undefined
 
   // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
   const globber = await glob.create(junitPath)
@@ -91,9 +92,9 @@ async function run(): Promise<void> {
     const cloudDashboardUrl = qaiUrl
       ? qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
       : undefined
-    const body = buildComment(result, traceResults, cloudDashboardUrl, runUrl)
+    const body = buildComment(result, traceResults, cloudDashboardUrl, runUrl, suiteName)
     try {
-      await upsertPrComment(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body)
+      await upsertPrComment(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body, suiteName)
       core.info(`Posted PR comment on PR #${ctx.prNumber}`)
     } catch (err) {
       core.warning(`Failed to post PR comment: ${String(err)}`)

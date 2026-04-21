@@ -1,6 +1,27 @@
 import type { AnalysisResult, TraceRcaResult } from './parse.js'
 
-const COMMENT_MARKER = '<!-- qai-test-intelligence -->'
+const BASE_MARKER = 'qai-test-intelligence'
+
+function markerFor(suiteName?: string): string {
+  const key = suiteName ? `${BASE_MARKER}:${suiteName.toLowerCase().replace(/\s+/g, '-')}` : BASE_MARKER
+  return `<!-- ${key} -->`
+}
+
+const ERROR_HINTS: Array<{ pattern: RegExp; cause: string; suggestion: string }> = [
+  { pattern: /timeout.*exceeded|timed out|TimeoutException/i, cause: 'Timeout', suggestion: 'Increase waitfor/timeout, add explicit waits, or check if the page/element loads slowly in CI.' },
+  { pattern: /no such element|element not found|NoSuchElementException/i, cause: 'Element not found', suggestion: 'Verify the selector is correct; the element may not be in the DOM yet — add an explicit wait.' },
+  { pattern: /stale element|StaleElementReferenceException/i, cause: 'Stale element', suggestion: 'Re-query the element after any navigation or DOM mutation instead of reusing a reference.' },
+  { pattern: /connection refused|ECONNREFUSED|ERR_CONNECTION/i, cause: 'Connection refused', suggestion: 'Check BASE_URL env var and that the test target is reachable from the CI runner.' },
+  { pattern: /assert.*failed|AssertionError|expect.*received/i, cause: 'Assertion failure', suggestion: 'The actual value differs from expected — add logging or a screenshot to capture state at failure.' },
+  { pattern: /login|authentication|401|403/i, cause: 'Auth failure', suggestion: 'Verify test credentials (username/password) and that the login page URL and selectors are correct.' },
+]
+
+function suggestFromMessage(message: string): { cause: string; suggestion: string } | null {
+  for (const hint of ERROR_HINTS) {
+    if (hint.pattern.test(message)) return { cause: hint.cause, suggestion: hint.suggestion }
+  }
+  return null
+}
 
 const RISK_EMOJI: Record<string, string> = {
   low: '🟢',
@@ -12,15 +33,16 @@ function truncate(str: string, max: number): string {
   return str.length > max ? str.slice(0, max) + '…' : str
 }
 
-export function buildComment(result: AnalysisResult, traceResults: TraceRcaResult[] = [], cloudUrl?: string, runUrl?: string): string {
+export function buildComment(result: AnalysisResult, traceResults: TraceRcaResult[] = [], cloudUrl?: string, runUrl?: string, suiteName?: string): string {
   const { totalTests, failedTests, passedTests, skippedTests, clusters, risk, tests } = result
   const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0
   const emoji = RISK_EMOJI[risk.level]
 
   const riskLabel = risk.level.charAt(0).toUpperCase() + risk.level.slice(1)
+  const suiteLabel = suiteName ? ` · ${suiteName}` : ''
   const lines: string[] = [
-    COMMENT_MARKER,
-    '<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
+    markerFor(suiteName),
+    `<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)**${suiteLabel} · Test Intelligence`,
     '',
     `**${totalTests} tests** &nbsp;|&nbsp; **${failedTests} failed** (${failRate}%) &nbsp;|&nbsp; ${emoji} **${riskLabel} Risk**${cloudUrl ? ` &nbsp;|&nbsp; [View in dashboard →](${cloudUrl})` : ''}`,
     '',
@@ -65,6 +87,22 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
       lines.push(`| \`${t.traceFile}\` | ${t.cause} | ${pct}% | ${suggestion} |`)
     }
     lines.push('')
+  } else if (failedTests > 0) {
+    // No trace files — derive suggestions from error messages
+    const suggestions: Array<{ test: string; cause: string; suggestion: string }> = []
+    for (const t of tests.filter(t => t.status === 'failed').slice(0, 5)) {
+      const hint = suggestFromMessage(t.errorMessage ?? '')
+      if (hint) suggestions.push({ test: truncate(`${t.suiteName} > ${t.testName}`, 55), ...hint })
+    }
+    if (suggestions.length > 0) {
+      lines.push('### Fix Suggestions')
+      lines.push('| Test | Likely Cause | Suggestion |')
+      lines.push('|---|---|---|')
+      for (const s of suggestions) {
+        lines.push(`| \`${s.test}\` | ${s.cause} | ${truncate(s.suggestion, 90)} |`)
+      }
+      lines.push('')
+    }
   }
 
   if (risk.reasons.length > 0) {
@@ -103,6 +141,6 @@ export function buildComment(result: AnalysisResult, traceResults: TraceRcaResul
   return lines.join('\n')
 }
 
-export function hasMarker(body: string): boolean {
-  return body.includes(COMMENT_MARKER)
+export function hasMarker(body: string, suiteName?: string): boolean {
+  return body.includes(markerFor(suiteName))
 }

@@ -41,6 +41,7 @@ export async function upsertPrComment(
   repo: string,
   prNumber: number,
   body: string,
+  suiteName?: string,
 ): Promise<void> {
   const octokit = new Octokit({ auth: token })
 
@@ -52,7 +53,7 @@ export async function upsertPrComment(
     per_page: 100,
   })
 
-  const existing = comments.find(c => c.body && hasMarker(c.body))
+  const existing = comments.find(c => c.body && hasMarker(c.body, suiteName))
 
   if (existing) {
     await octokit.rest.issues.updateComment({

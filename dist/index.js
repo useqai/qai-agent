@@ -34021,7 +34021,26 @@ module.exports = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildComment = buildComment;
 exports.hasMarker = hasMarker;
-const COMMENT_MARKER = '<!-- qai-test-intelligence -->';
+const BASE_MARKER = 'qai-test-intelligence';
+function markerFor(suiteName) {
+    const key = suiteName ? `${BASE_MARKER}:${suiteName.toLowerCase().replace(/\s+/g, '-')}` : BASE_MARKER;
+    return `<!-- ${key} -->`;
+}
+const ERROR_HINTS = [
+    { pattern: /timeout.*exceeded|timed out|TimeoutException/i, cause: 'Timeout', suggestion: 'Increase waitfor/timeout, add explicit waits, or check if the page/element loads slowly in CI.' },
+    { pattern: /no such element|element not found|NoSuchElementException/i, cause: 'Element not found', suggestion: 'Verify the selector is correct; the element may not be in the DOM yet — add an explicit wait.' },
+    { pattern: /stale element|StaleElementReferenceException/i, cause: 'Stale element', suggestion: 'Re-query the element after any navigation or DOM mutation instead of reusing a reference.' },
+    { pattern: /connection refused|ECONNREFUSED|ERR_CONNECTION/i, cause: 'Connection refused', suggestion: 'Check BASE_URL env var and that the test target is reachable from the CI runner.' },
+    { pattern: /assert.*failed|AssertionError|expect.*received/i, cause: 'Assertion failure', suggestion: 'The actual value differs from expected — add logging or a screenshot to capture state at failure.' },
+    { pattern: /login|authentication|401|403/i, cause: 'Auth failure', suggestion: 'Verify test credentials (username/password) and that the login page URL and selectors are correct.' },
+];
+function suggestFromMessage(message) {
+    for (const hint of ERROR_HINTS) {
+        if (hint.pattern.test(message))
+            return { cause: hint.cause, suggestion: hint.suggestion };
+    }
+    return null;
+}
 const RISK_EMOJI = {
     low: '🟢',
     medium: '🟡',
@@ -34030,14 +34049,15 @@ const RISK_EMOJI = {
 function truncate(str, max) {
     return str.length > max ? str.slice(0, max) + '…' : str;
 }
-function buildComment(result, traceResults = [], cloudUrl, runUrl) {
+function buildComment(result, traceResults = [], cloudUrl, runUrl, suiteName) {
     const { totalTests, failedTests, passedTests, skippedTests, clusters, risk, tests } = result;
     const failRate = totalTests > 0 ? Math.round((failedTests / totalTests) * 100) : 0;
     const emoji = RISK_EMOJI[risk.level];
     const riskLabel = risk.level.charAt(0).toUpperCase() + risk.level.slice(1);
+    const suiteLabel = suiteName ? ` · ${suiteName}` : '';
     const lines = [
-        COMMENT_MARKER,
-        '<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)** · Test Intelligence',
+        markerFor(suiteName),
+        `<img src="https://github.com/user-attachments/assets/24e816df-529b-4535-bd41-e21669b88b61" alt="QAI" width="20" height="20" align="left" style="margin-right:8px"/> **[QAI Agent](https://useqai.dev)**${suiteLabel} · Test Intelligence`,
         '',
         `**${totalTests} tests** &nbsp;|&nbsp; **${failedTests} failed** (${failRate}%) &nbsp;|&nbsp; ${emoji} **${riskLabel} Risk**${cloudUrl ? ` &nbsp;|&nbsp; [View in dashboard →](${cloudUrl})` : ''}`,
         '',
@@ -34080,6 +34100,24 @@ function buildComment(result, traceResults = [], cloudUrl, runUrl) {
         }
         lines.push('');
     }
+    else if (failedTests > 0) {
+        // No trace files — derive suggestions from error messages
+        const suggestions = [];
+        for (const t of tests.filter(t => t.status === 'failed').slice(0, 5)) {
+            const hint = suggestFromMessage(t.errorMessage ?? '');
+            if (hint)
+                suggestions.push({ test: truncate(`${t.suiteName} > ${t.testName}`, 55), ...hint });
+        }
+        if (suggestions.length > 0) {
+            lines.push('### Fix Suggestions');
+            lines.push('| Test | Likely Cause | Suggestion |');
+            lines.push('|---|---|---|');
+            for (const s of suggestions) {
+                lines.push(`| \`${s.test}\` | ${s.cause} | ${truncate(s.suggestion, 90)} |`);
+            }
+            lines.push('');
+        }
+    }
     if (risk.reasons.length > 0) {
         lines.push('### Risk Factors');
         for (const r of risk.reasons) {
@@ -34113,8 +34151,8 @@ function buildComment(result, traceResults = [], cloudUrl, runUrl) {
     lines.push(`<sub>${stats.join(' · ')} · Powered by QAI Platform</sub>`);
     return lines.join('\n');
 }
-function hasMarker(body) {
-    return body.includes(COMMENT_MARKER);
+function hasMarker(body, suiteName) {
+    return body.includes(markerFor(suiteName));
 }
 
 
@@ -34152,7 +34190,7 @@ function getGithubContext() {
     }
     return { owner: owner ?? '', repo: repo ?? '', prNumber, sha, runId, branch, ref };
 }
-async function upsertPrComment(token, owner, repo, prNumber, body) {
+async function upsertPrComment(token, owner, repo, prNumber, body, suiteName) {
     const octokit = new rest_1.Octokit({ auth: token });
     // Search existing comments for our marker — update if found, create otherwise
     const { data: comments } = await octokit.rest.issues.listComments({
@@ -34161,7 +34199,7 @@ async function upsertPrComment(token, owner, repo, prNumber, body) {
         issue_number: prNumber,
         per_page: 100,
     });
-    const existing = comments.find(c => c.body && (0, comment_js_1.hasMarker)(c.body));
+    const existing = comments.find(c => c.body && (0, comment_js_1.hasMarker)(c.body, suiteName));
     if (existing) {
         await octokit.rest.issues.updateComment({
             owner,
@@ -34240,6 +34278,7 @@ async function run() {
     const playwrightReport = core.getInput('playwright-report');
     const failOnHighRisk = core.getInput('fail-on-high-risk') === 'true';
     const slackWebhookUrl = core.getInput('slack-webhook-url');
+    const suiteName = core.getInput('suite-name') || undefined;
     // ── Resolve JUnit file(s) ──────────────────────────────────────────────────
     const globber = await glob.create(junitPath);
     const files = await globber.glob();
@@ -34307,9 +34346,9 @@ async function run() {
         const cloudDashboardUrl = qaiUrl
             ? qaiUrl.replace(/^https?:\/\/ingest\./, 'https://').replace(/\/$/, '')
             : undefined;
-        const body = (0, comment_js_1.buildComment)(result, traceResults, cloudDashboardUrl, runUrl);
+        const body = (0, comment_js_1.buildComment)(result, traceResults, cloudDashboardUrl, runUrl, suiteName);
         try {
-            await (0, github_js_1.upsertPrComment)(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body);
+            await (0, github_js_1.upsertPrComment)(githubToken, ctx.owner, ctx.repo, ctx.prNumber, body, suiteName);
             core.info(`Posted PR comment on PR #${ctx.prNumber}`);
         }
         catch (err) {
