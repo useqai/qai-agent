@@ -10,7 +10,7 @@ QAI Agent is a GitHub Action that automatically analyzes your CI test failures a
 
 ## Try it in 60 seconds — no setup required
 
-Fork [`useqai/demo-shop`](https://github.com/useqai/demo-shop) — a sample e-commerce app with Playwright tests already wired up. Add your API key and open a PR to see QAI in action on real failures.
+Fork [`useqai/demo-shop`](https://github.com/useqai/demo-shop) — a sample e-commerce app with four test suites already wired up: Playwright, Selenium Java, Selenium Python, and WebdriverIO. Open a PR to see QAI in action across all frameworks.
 
 1. **Fork** [useqai/demo-shop](https://github.com/useqai/demo-shop/fork)
 2. **Add secret** — `QAI_API_KEY` → your key from [useqai.dev/settings/api-keys](https://useqai.dev/settings/api-keys)
@@ -55,6 +55,105 @@ jobs:
 ```
 
 That's it — every PR now gets a risk score, failure clusters, and a merge recommendation.
+
+---
+
+## Framework setup examples
+
+### Selenium Java + JUnit 5
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Run tests
+        run: mvn test
+        # outputs to target/surefire-reports/*.xml automatically
+      - name: QAI Agent
+        uses: useqai/qai-agent@v1
+        if: always()
+        with:
+          junit-path: 'target/surefire-reports/*.xml'
+          qai-url: https://ingest.useqai.dev
+          qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+### Selenium Python + pytest
+
+```yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run tests
+        run: |
+          pip install -r requirements.txt
+          pytest --junitxml=test-results/results.xml
+      - name: QAI Agent
+        uses: useqai/qai-agent@v1
+        if: always()
+        with:
+          junit-path: 'test-results/results.xml'
+          qai-url: https://ingest.useqai.dev
+          qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+### WebdriverIO + Mocha
+
+Add the JUnit reporter to `wdio.conf.js`:
+```js
+reporters: [['junit', { outputDir: './test-results', outputFileFormat: () => 'results.xml' }]]
+```
+
+```yaml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run tests
+        run: |
+          npm install
+          npx wdio run wdio.conf.js
+      - name: QAI Agent
+        uses: useqai/qai-agent@v1
+        if: always()
+        with:
+          junit-path: 'test-results/results.xml'
+          qai-url: https://ingest.useqai.dev
+          qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+### Jest
+
+```yaml
+      - name: Run tests
+        run: npx jest --reporters=jest-junit
+        env:
+          JEST_JUNIT_OUTPUT_DIR: test-results
+          JEST_JUNIT_OUTPUT_NAME: results.xml
+      - name: QAI Agent
+        uses: useqai/qai-agent@v1
+        if: always()
+        with:
+          junit-path: 'test-results/results.xml'
+          qai-url: https://ingest.useqai.dev
+          qai-api-key: ${{ secrets.QAI_API_KEY }}
+```
+
+> See live examples of all four frameworks in [useqai/demo-shop](https://github.com/useqai/demo-shop/tree/main/.github/workflows).
 
 ---
 
@@ -264,16 +363,44 @@ You can use outputs to conditionally block merges or trigger notifications:
 
 ## Supported test frameworks
 
-Any framework that outputs JUnit XML:
+QAI works with any framework that outputs JUnit XML. Playwright gets the deepest analysis (AI trace RCA + screenshots). All other frameworks get clustering, risk scoring, PR comments, and error-message RCA.
 
-| Framework | Reporter flag |
+### Full support — JUnit XML + Playwright trace analysis
+
+| Framework | Setup |
 |---|---|
-| Playwright | `--reporter=junit` |
+| Playwright (TypeScript/JavaScript) | `--reporter=junit` + `trace: 'retain-on-failure'` |
+| Playwright (Python) | `--reporter=junit` + `trace: 'retain-on-failure'` |
+| Playwright (Java) | `--reporter=junit` + `trace: 'retain-on-failure'` |
+
+### JUnit XML support — clustering, risk score, PR comment, error-message RCA
+
+| Framework | JUnit XML output |
+|---|---|
+| Selenium Java + JUnit 5 | `mvn test` → `target/surefire-reports/*.xml` |
+| Selenium Java + TestNG | `mvn test` → `target/surefire-reports/*.xml` |
+| Selenium Python + pytest | `pytest --junitxml=results.xml` |
+| WebdriverIO + Mocha | `reporters: [['junit', { outputDir: './results' }]]` |
 | Jest | `--reporters=jest-junit` |
 | Vitest | `--reporter=junit` |
 | pytest | `--junitxml=results.xml` |
-| Maven/JUnit | built-in |
+| Maven/JUnit 4/5 | built-in Surefire plugin |
 | Go (gotestsum) | `--junitfile results.xml` |
+| NUnit (.NET) | JUnit XML via `NUnit.ConsoleRunner` |
+| RSpec (Ruby) | `--format RspecJunitFormatter` |
+
+### What each gets
+
+| Feature | Playwright | All other frameworks |
+|---|---|---|
+| PR comment with risk score | ✅ | ✅ |
+| Failure clustering | ✅ | ✅ |
+| Merge verdict | ✅ | ✅ |
+| AI root cause (trace-based) | ✅ full | ✅ error-message only |
+| Screenshot at point of failure | ✅ | ❌ |
+| Ask QAI in PR | ✅ | ✅ |
+| Historical trends + flakiness | ✅ | ✅ |
+| Test Effectiveness Score | ✅ | ✅ |
 
 ---
 
