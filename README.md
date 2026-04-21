@@ -153,7 +153,7 @@ reporters: [['junit', { outputDir: './test-results', outputFileFormat: () => 're
           qai-api-key: ${{ secrets.QAI_API_KEY }}
 ```
 
-> See live examples of all four frameworks in [useqai/demo-shop](https://github.com/useqai/demo-shop/tree/main/.github/workflows).
+> **Multiple frameworks on the same PR?** Add `suite-name` to each workflow (e.g. `suite-name: 'Selenium Java'`). QAI posts a separate comment per suite instead of overwriting. See live examples in [useqai/demo-shop](https://github.com/useqai/demo-shop/tree/main/.github/workflows).
 
 ---
 
@@ -319,6 +319,7 @@ Platform users (with `qai-url` + `qai-api-key`) get a richer Slack message that 
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `junit-path` | ✅ | — | Glob path to JUnit XML file(s). E.g. `test-results/*.xml` or `**/junit-*.xml` |
+| `suite-name` | ❌ | — | Display name for this test suite (e.g. `'Selenium Java'`). **Required when running multiple frameworks on the same PR** — each workflow must have a unique name so QAI posts a separate comment per suite instead of overwriting. |
 | `github-token` | ❌ | `${{ github.token }}` | Token for posting PR comments. The built-in token works for most repos. |
 | `post-comment` | ❌ | `true` | Set to `false` to skip posting the PR comment |
 | `trace-path` | ❌ | — | Glob to Playwright trace zip files. E.g. `test-results/**/*.zip` |
