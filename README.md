@@ -20,6 +20,8 @@ Fork [`useqai/demo-shop`](https://github.com/useqai/demo-shop) — a sample e-co
 
 You'll get a risk score, failure clusters, and AI root cause analysis on your PR — no config needed.
 
+**Want instant results without forking?** Paste any JUnit XML at [useqai.dev/try](https://useqai.dev/try) — see risk score, failure clusters, and a full PR comment preview in seconds. No sign-up needed.
+
 ---
 
 ## Quick start
