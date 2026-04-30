@@ -192,7 +192,7 @@ Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 | Per-PR risk score | ✅ | ✅ |
 | Failure clusters on PR | ✅ | ✅ |
 | AI root cause (from traces) | ✅ one-liner | ✅ full explanation + evidence |
-| **AI fix suggestions per failed test** | 💡 link in PR comment | ✅ streamed live in dashboard |
+| **AI fix suggestions per failed test** | — | ✅ code fix posted on PR comment + per failing test in dashboard |
 | **Richer fixes from Playwright report** | — | ✅ exact failed step + network errors |
 | Slack alert on high risk | ✅ basic (PR link + count) | ✅ rich (cluster count, reasons, dashboard link) |
 | Fail rate trends over time | — | ✅ chart across all runs |
