@@ -1,11 +1,33 @@
 import * as core from '@actions/core'
 import * as glob from '@actions/glob'
 import { readFileSync } from 'node:fs'
+import { basename, dirname } from 'node:path'
 import { parseJunitXml, analyze, analyzeTraces } from './parse.js'
+import type { ParsedTestCase } from './parse.js'
 import { buildComment } from './comment.js'
 import { getGithubContext, upsertPrComment } from './github.js'
 import { sendToCloud, sendTraceToCloud, sendReportToCloud } from './ingest.js'
 import { postSlackAlert } from './slack.js'
+
+function matchTraceToTest(tracePath: string, tests: ParsedTestCase[]): { testName: string; status: string } | undefined {
+  const dirName = basename(dirname(tracePath))
+  // Strip browser suffix and retry: "cart-added-item-chromium-retry1" → "cart-added-item"
+  const withoutBrowser = dirName.replace(/-(?:chromium|firefox|webkit)(?:-retry\d+)?$/, '')
+  const normalized = withoutBrowser.replace(/-/g, ' ').toLowerCase()
+
+  const score = (test: ParsedTestCase): number => {
+    // Strip describe prefix: "Cart › added item appears in cart" → "added item appears in cart"
+    const bare = test.testName.toLowerCase().replace(/^.+[›>]\s*/, '')
+    const words = bare.split(/\s+/).filter(w => w.length > 3)
+    if (words.length === 0) return 0
+    return words.filter(w => normalized.includes(w)).length / words.length
+  }
+
+  const scored = tests.map(t => ({ test: t, score: score(t) })).sort((a, b) => b.score - a.score)
+  const best = scored[0]
+  if (best && best.score >= 0.5) return { testName: best.test.testName, status: best.test.status }
+  return undefined
+}
 
 async function run(): Promise<void> {
   const junitPath = core.getInput('junit-path', { required: true })
@@ -71,8 +93,9 @@ async function run(): Promise<void> {
     }
     for (const trace of traceFiles) {
       try {
-        await sendTraceToCloud(qaiUrl, qaiApiKey, trace, ctx)
-        core.info(`Sent trace ${trace} to QAI cloud platform`)
+        const matchedTest = matchTraceToTest(trace, result.tests)
+        await sendTraceToCloud(qaiUrl, qaiApiKey, trace, ctx, matchedTest)
+        core.info(`Sent trace ${trace} to QAI cloud platform${matchedTest ? ` (matched: ${matchedTest.testName} / ${matchedTest.status})` : ''}`)
       } catch (err) {
         core.warning(`Failed to send trace to QAI cloud: ${String(err)}`)
       }

@@ -34263,11 +34263,31 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(7484));
 const glob = __importStar(__nccwpck_require__(7206));
 const node_fs_1 = __nccwpck_require__(3024);
+const node_path_1 = __nccwpck_require__(6760);
 const parse_js_1 = __nccwpck_require__(2828);
 const comment_js_1 = __nccwpck_require__(2246);
 const github_js_1 = __nccwpck_require__(9248);
 const ingest_js_1 = __nccwpck_require__(5727);
 const slack_js_1 = __nccwpck_require__(6691);
+function matchTraceToTest(tracePath, tests) {
+    const dirName = (0, node_path_1.basename)((0, node_path_1.dirname)(tracePath));
+    // Strip browser suffix and retry: "cart-added-item-chromium-retry1" → "cart-added-item"
+    const withoutBrowser = dirName.replace(/-(?:chromium|firefox|webkit)(?:-retry\d+)?$/, '');
+    const normalized = withoutBrowser.replace(/-/g, ' ').toLowerCase();
+    const score = (test) => {
+        // Strip describe prefix: "Cart › added item appears in cart" → "added item appears in cart"
+        const bare = test.testName.toLowerCase().replace(/^.+[›>]\s*/, '');
+        const words = bare.split(/\s+/).filter(w => w.length > 3);
+        if (words.length === 0)
+            return 0;
+        return words.filter(w => normalized.includes(w)).length / words.length;
+    };
+    const scored = tests.map(t => ({ test: t, score: score(t) })).sort((a, b) => b.score - a.score);
+    const best = scored[0];
+    if (best && best.score >= 0.5)
+        return { testName: best.test.testName, status: best.test.status };
+    return undefined;
+}
 async function run() {
     const junitPath = core.getInput('junit-path', { required: true });
     const githubToken = core.getInput('github-token');
@@ -34324,8 +34344,9 @@ async function run() {
         }
         for (const trace of traceFiles) {
             try {
-                await (0, ingest_js_1.sendTraceToCloud)(qaiUrl, qaiApiKey, trace, ctx);
-                core.info(`Sent trace ${trace} to QAI cloud platform`);
+                const matchedTest = matchTraceToTest(trace, result.tests);
+                await (0, ingest_js_1.sendTraceToCloud)(qaiUrl, qaiApiKey, trace, ctx, matchedTest);
+                core.info(`Sent trace ${trace} to QAI cloud platform${matchedTest ? ` (matched: ${matchedTest.testName} / ${matchedTest.status})` : ''}`);
             }
             catch (err) {
                 core.warning(`Failed to send trace to QAI cloud: ${String(err)}`);
@@ -34473,7 +34494,7 @@ async function sendReportToCloud(qaiUrl, qaiApiKey, reportPath, ctx) {
         throw new Error(`QAI playwright-report ingest failed: ${res.status} ${text}`);
     }
 }
-async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx) {
+async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx, matchedTest) {
     const fileBuffer = (0, node_fs_1.readFileSync)(tracePath);
     // Use parent directory name as filename to make each trace unique and encode the test name.
     // e.g. cart-Cart-added-item-appears-in-cart-chromium/trace.zip → cart-Cart-added-item-appears-in-cart-chromium.zip
@@ -34490,6 +34511,10 @@ async function sendTraceToCloud(qaiUrl, qaiApiKey, tracePath, ctx) {
         form.append('workflow', process.env.GITHUB_WORKFLOW);
     if (process.env.GITHUB_JOB)
         form.append('job', process.env.GITHUB_JOB);
+    if (matchedTest) {
+        form.append('test_name', matchedTest.testName);
+        form.append('test_status', matchedTest.status);
+    }
     const url = qaiUrl.replace(/\/$/, '') + '/ingest/trace';
     const res = await fetch(url, {
         method: 'POST',

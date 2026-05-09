@@ -102,6 +102,7 @@ export async function sendTraceToCloud(
   qaiApiKey: string,
   tracePath: string,
   ctx: GithubContext,
+  matchedTest?: { testName: string; status: string },
 ): Promise<void> {
   const fileBuffer = readFileSync(tracePath)
   // Use parent directory name as filename to make each trace unique and encode the test name.
@@ -118,6 +119,10 @@ export async function sendTraceToCloud(
   form.append('branch', ctx.branch)
   if (process.env.GITHUB_WORKFLOW) form.append('workflow', process.env.GITHUB_WORKFLOW)
   if (process.env.GITHUB_JOB) form.append('job', process.env.GITHUB_JOB)
+  if (matchedTest) {
+    form.append('test_name', matchedTest.testName)
+    form.append('test_status', matchedTest.status)
+  }
 
   const url = qaiUrl.replace(/\/$/, '') + '/ingest/trace'
   const res = await fetch(url, {
