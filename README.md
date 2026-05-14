@@ -204,6 +204,7 @@ Sign up takes 30 seconds at [useqai.dev](https://useqai.dev).
 | **Execution flow diagrams** (Playwright) | — | ✅ visual step-by-step flow of each test run, auto-generated from Playwright traces |
 | **Predictive Alerts** | — | ✅ AI detects tests trending toward failure before they break — duration trends, flakiness spikes, unresolved clusters |
 | **Behavioral Coverage** (Playwright) | — | ✅ interactive page-tree showing which pages and API endpoints each test suite exercises, with pass/fail rates per path |
+| **Confidence Map** (Playwright) | — | ✅ risk heatmap of every observed URL — cell size = test volume, color = risk level (failure rate · coverage depth · trend) |
 
 ---
 
